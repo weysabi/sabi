@@ -1,0 +1,370 @@
+import type {
+  ProviderConfig,
+  ProviderCallResult,
+  StreamChunk,
+  CircuitBreakerState,
+  ResolvedSabiOptions,
+} from "./types";
+import { ProviderRequestError, CircuitBreakerOpenError } from "./errors";
+import { createModuleLogger } from "./logger";
+import type { Catalog } from "@joinremba/catalog";
+import { tryParseJSON } from "./utils";
+import type { ProviderHandler } from "./providers/handler";
+import { openaiHandler } from "./providers/openai";
+import { anthropicHandler } from "./providers/anthropic";
+import { googleHandler } from "./providers/google";
+
+function noop(): void {}
+
+const DEFAULT_BASE_URLS: Record<string, string> = {
+  anthropic: "https://api.anthropic.com",
+  google: "https://generativelanguage.googleapis.com",
+};
+
+function getDefaultBaseUrl(name: string): string {
+  return DEFAULT_BASE_URLS[name] ?? "https://api.openai.com/v1";
+}
+
+function getHandler(name: string): ProviderHandler {
+  if (name === "anthropic") return anthropicHandler;
+  if (name === "google") return googleHandler;
+  return openaiHandler;
+}
+
+export class ProviderClient {
+  public readonly name: string;
+  public readonly baseUrl: string;
+  private readonly apiKey: string;
+  private readonly handler: ProviderHandler;
+  private cbState: CircuitBreakerState = {
+    failures: [],
+    tripped: false,
+    trippedAt: 0,
+  };
+  private readonly opts: ResolvedSabiOptions;
+  private readonly log: Catalog;
+
+  constructor(name: string, config: ProviderConfig, opts: ResolvedSabiOptions) {
+    this.name = name;
+    this.apiKey = config.apiKey;
+    this.baseUrl = config.baseUrl ?? getDefaultBaseUrl(name);
+    this.handler = getHandler(name);
+    this.opts = opts;
+    this.log = createModuleLogger(`providers.${name}`);
+  }
+
+  async complete(
+    modelId: string,
+    messages: Array<{ role: string; content: string }>,
+    params: {
+      temperature?: number;
+      maxTokens?: number;
+      topP?: number;
+      stop?: string | string[];
+      timeout: number;
+      responseFormat?: Record<string, unknown>;
+    }
+  ): Promise<ProviderCallResult> {
+    this.checkCircuitBreaker();
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= this.opts.retry.maxRetries; attempt++) {
+      if (attempt > 0) {
+        const backoff = this.opts.retry.backoffMs * Math.pow(2, attempt - 1);
+        this.log.warn({
+          message: `Retrying ${this.name}/${modelId} after ${backoff}ms`,
+          model: modelId,
+          attempt,
+          backoffMs: backoff,
+        });
+        await this.sleep(backoff);
+      }
+
+      try {
+        const result = await this.executeRequest(modelId, messages, params);
+        this.onSuccess();
+        if (attempt > 0) {
+          this.log.info({
+            message: `Retry succeeded for ${this.name}/${modelId}`,
+            model: modelId,
+            attempt,
+          });
+        }
+        return result;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        this.log.error({
+          message: `Request failed for ${this.name}/${modelId}`,
+          model: modelId,
+          attempt,
+          error: lastError.message,
+        });
+
+        if (err instanceof ProviderRequestError) {
+          const shouldRetry = this.opts.retry.statusCodes.includes(err.statusCode ?? 0);
+          if (!shouldRetry || attempt === this.opts.retry.maxRetries) {
+            this.onFailure();
+            throw lastError;
+          }
+        } else {
+          if (attempt === this.opts.retry.maxRetries) {
+            this.onFailure();
+            throw lastError;
+          }
+        }
+      }
+    }
+
+    this.onFailure();
+    throw lastError ?? new Error("Unknown error");
+  }
+
+  private async executeRequest(
+    modelId: string,
+    messages: Array<{ role: string; content: string }>,
+    params: {
+      temperature?: number;
+      maxTokens?: number;
+      topP?: number;
+      stop?: string | string[];
+      timeout: number;
+      responseFormat?: Record<string, unknown>;
+    }
+  ): Promise<ProviderCallResult> {
+    const url = this.handler.buildUrl(this.baseUrl, modelId);
+    const headers = this.handler.buildHeaders(this.apiKey);
+    const body = this.handler.buildBody(modelId, messages, {
+      ...params,
+      stream: false,
+    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), params.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(noop);
+        throw new ProviderRequestError(
+          this.name,
+          modelId,
+          response.status,
+          text || response.statusText
+        );
+      }
+
+      const data = await response.json();
+
+      try {
+        return this.handler.parseResponse(data);
+      } catch (parseErr) {
+        throw new ProviderRequestError(
+          this.name,
+          modelId,
+          undefined,
+          parseErr instanceof Error ? parseErr.message : "Failed to parse response"
+        );
+      }
+    } catch (err) {
+      if (err instanceof ProviderRequestError) throw err;
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new ProviderRequestError(
+          this.name,
+          modelId,
+          undefined,
+          `Request timed out after ${params.timeout}ms`
+        );
+      }
+      throw new ProviderRequestError(
+        this.name,
+        modelId,
+        undefined,
+        err instanceof Error ? err.message : String(err)
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private checkCircuitBreaker(): void {
+    if (!this.cbState.tripped) return;
+
+    const elapsed = Date.now() - this.cbState.trippedAt;
+    if (elapsed >= this.opts.circuitBreaker.cooldownMs) {
+      this.cbState.tripped = false;
+      this.cbState.failures = [];
+      this.log.info({ message: `Circuit breaker recovered for ${this.name}` });
+      return;
+    }
+
+    const remaining = this.opts.circuitBreaker.cooldownMs - elapsed;
+    this.log.warn({
+      message: `Circuit breaker open for ${this.name}, retry in ${remaining}ms`,
+      cooldownRemainingMs: remaining,
+    });
+    throw new CircuitBreakerOpenError(this.name, remaining);
+  }
+
+  private onSuccess(): void {
+    if (this.cbState.failures.length > 0) {
+      this.log.info({ message: `Request succeeded, resetting circuit breaker for ${this.name}` });
+    }
+    this.cbState.failures = [];
+    this.cbState.tripped = false;
+  }
+
+  private onFailure(): void {
+    const now = Date.now();
+    const windowStart = now - this.opts.circuitBreaker.windowMs;
+    this.cbState.failures = this.cbState.failures.filter((ts) => ts > windowStart);
+    this.cbState.failures.push(now);
+
+    if (this.cbState.failures.length >= this.opts.circuitBreaker.threshold) {
+      this.cbState.tripped = true;
+      this.cbState.trippedAt = now;
+      this.log.error({
+        message: `Circuit breaker tripped for ${this.name}`,
+        failures: this.cbState.failures.length,
+        threshold: this.opts.circuitBreaker.threshold,
+        windowMs: this.opts.circuitBreaker.windowMs,
+      });
+    }
+  }
+
+  async stream(
+    modelId: string,
+    messages: Array<{ role: string; content: string }>,
+    params: {
+      temperature?: number;
+      maxTokens?: number;
+      topP?: number;
+      stop?: string | string[];
+      timeout: number;
+    }
+  ): Promise<AsyncIterable<StreamChunk>> {
+    this.checkCircuitBreaker();
+
+    const url = this.handler.buildUrl(this.baseUrl, modelId);
+    const headers = this.handler.buildHeaders(this.apiKey);
+    const body = this.handler.buildBody(modelId, messages, {
+      ...params,
+      stream: true,
+    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), params.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(noop);
+        this.onFailure();
+        clearTimeout(timeoutId);
+        throw new ProviderRequestError(
+          this.name,
+          modelId,
+          response.status,
+          text || response.statusText
+        );
+      }
+
+      const rawReader = response.body?.getReader();
+      if (!rawReader) {
+        this.onFailure();
+        clearTimeout(timeoutId);
+        throw new ProviderRequestError(
+          this.name,
+          modelId,
+          undefined,
+          "Response body is not readable"
+        );
+      }
+
+      this.onSuccess();
+      return this.parseSSEStream(
+        modelId,
+        rawReader as ReadableStreamDefaultReader<Uint8Array>,
+        timeoutId
+      );
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err instanceof ProviderRequestError) throw err;
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new ProviderRequestError(
+          this.name,
+          modelId,
+          undefined,
+          `Stream timed out after ${params.timeout}ms`
+        );
+      }
+      throw new ProviderRequestError(
+        this.name,
+        modelId,
+        undefined,
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+  }
+
+  private async *parseSSEStream(
+    modelId: string,
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    timeoutId: ReturnType<typeof setTimeout>
+  ): AsyncIterable<StreamChunk> {
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+          const raw = trimmed.slice(6);
+          if (raw === "[DONE]") return;
+
+          const parsed = tryParseJSON(raw);
+          if (parsed === null) continue;
+
+          const usage = this.handler.parseStreamUsage(parsed);
+          if (usage) {
+            yield { content: "", usage, done: true };
+            return;
+          }
+
+          const chunk = this.handler.parseStreamChunk(parsed);
+          if (chunk === null) continue;
+
+          yield { content: chunk.content, done: chunk.done };
+          if (chunk.done) return;
+        }
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}
