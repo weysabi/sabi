@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { createSabi, estimateCost } from "./index";
+import { describe, it, expect, beforeEach, afterEach, afterAll } from "bun:test";
+import { createSabi, estimateCost, addPricing } from "./index";
 import type { TelemetryHooks } from "./types";
 
 function okResponse(body: unknown) {
@@ -323,6 +323,73 @@ describe("telemetry hooks", () => {
     it("returns undefined when usage is missing", () => {
       const cost = estimateCost("gpt-4o-mini", undefined);
       expect(cost).toBeUndefined();
+    });
+  });
+
+  describe("extensible pricing", () => {
+    describe("per-instance pricing", () => {
+      it("uses per-instance pricing overrides via options", async () => {
+        setFetch(async () =>
+          okResponse({
+            choices: [{ message: { content: "Hello" } }],
+            usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 },
+          })
+        );
+
+        const sabi = createSabi(
+          { openai: { apiKey: "key" } },
+          {
+            pricing: { "gpt-4o-mini": { inputPer1M: 1, outputPer1M: 2 } },
+          }
+        );
+
+        const result = await sabi.complete({
+          model: "openai/gpt-4o-mini",
+          messages: [{ role: "user", content: "hi" }],
+        });
+
+        expect(result.estimatedCostUsd).toBe(0.0005);
+      });
+
+      it("per-instance pricing does not affect global table", async () => {
+        const cost = estimateCost("gpt-4o-mini", {
+          promptTokens: 1_000_000,
+          completionTokens: 1_000_000,
+        });
+        expect(cost).toBe(0.75);
+      });
+    });
+
+    describe("addPricing", () => {
+      afterAll(() => {
+        addPricing({ "gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 } });
+      });
+
+      it("adds pricing for unknown models", () => {
+        const cost = estimateCost("my-custom-model", {
+          promptTokens: 1_000_000,
+          completionTokens: 1_000_000,
+        });
+        expect(cost).toBeUndefined();
+
+        addPricing({ "my-custom-model": { inputPer1M: 1, outputPer1M: 2 } });
+
+        const updated = estimateCost("my-custom-model", {
+          promptTokens: 1_000_000,
+          completionTokens: 1_000_000,
+        });
+        expect(updated).toBe(3);
+      });
+
+      it("overrides existing pricing", () => {
+        addPricing({ "gpt-4o-mini": { inputPer1M: 999, outputPer1M: 999 } });
+
+        const cost = estimateCost("gpt-4o-mini", {
+          promptTokens: 1_000_000,
+          completionTokens: 1_000_000,
+        });
+        expect(cost).toBe(1998);
+      });
     });
   });
 });

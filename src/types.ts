@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ModelPricing } from "./pricing";
 
 export const MessageRoleSchema = z.enum(["system", "user", "assistant"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
@@ -33,6 +34,7 @@ export const SabiOptionsSchema = z.object({
   retry: RetryOptionsSchema.optional(),
   circuitBreaker: CircuitBreakerOptionsSchema.optional(),
   telemetry: z.any().optional(),
+  pricing: z.any().optional(),
 });
 export type SabiOptions = z.input<typeof SabiOptionsSchema>;
 
@@ -49,6 +51,7 @@ export interface ResolvedSabiOptions {
     windowMs: number;
   };
   telemetry?: TelemetryHooks;
+  pricing?: Record<string, ModelPricing>;
 }
 
 export function resolveSabiOptions(raw: SabiOptions): ResolvedSabiOptions {
@@ -65,6 +68,7 @@ export function resolveSabiOptions(raw: SabiOptions): ResolvedSabiOptions {
       windowMs: raw.circuitBreaker?.windowMs ?? 60_000,
     },
     telemetry: raw.telemetry as TelemetryHooks | undefined,
+    pricing: raw.pricing as Record<string, ModelPricing> | undefined,
   };
 }
 

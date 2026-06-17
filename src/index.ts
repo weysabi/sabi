@@ -65,7 +65,8 @@ export {
   SchemaValidationError,
 };
 
-export { estimateCost } from "./pricing";
+export { estimateCost, addPricing } from "./pricing";
+export type { ModelPricing } from "./pricing";
 
 export interface Sabi {
   prompt(name: string, template: string): void;
@@ -151,7 +152,7 @@ class SabiImpl implements Sabi {
             responseFormat: schema !== undefined ? { type: "json_object" as const } : undefined,
           });
           const latencyMs = performance.now() - start;
-          const cost = estimateCost(modelId, result.usage);
+          const cost = estimateCost(modelId, result.usage, this.opts.pricing);
 
           if (schema === undefined) {
             this.log.info({

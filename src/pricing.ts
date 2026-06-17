@@ -1,4 +1,9 @@
-const PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
+export interface ModelPricing {
+  inputPer1M: number;
+  outputPer1M: number;
+}
+
+const GLOBAL_PRICING: Record<string, ModelPricing> = {
   "gpt-4o": { inputPer1M: 2.5, outputPer1M: 10 },
   "gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 },
   "gpt-4-turbo": { inputPer1M: 10, outputPer1M: 30 },
@@ -25,12 +30,19 @@ const PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
   "mistral-small": { inputPer1M: 1, outputPer1M: 3 },
 };
 
+export function addPricing(entries: Record<string, ModelPricing>): void {
+  for (const [model, price] of Object.entries(entries)) {
+    GLOBAL_PRICING[model] = price;
+  }
+}
+
 export function estimateCost(
   modelId: string,
-  usage?: { promptTokens: number; completionTokens: number }
+  usage?: { promptTokens: number; completionTokens: number },
+  overrides?: Record<string, ModelPricing>
 ): number | undefined {
   if (usage === undefined) return undefined;
-  const price = PRICING[modelId];
+  const price = overrides?.[modelId] ?? GLOBAL_PRICING[modelId];
   if (price === undefined) return undefined;
   const inputCost = (usage.promptTokens / 1_000_000) * price.inputPer1M;
   const outputCost = (usage.completionTokens / 1_000_000) * price.outputPer1M;
