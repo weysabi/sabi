@@ -66,6 +66,7 @@ export const SabiOptionsSchema = z.object({
   circuitBreaker: CircuitBreakerOptionsSchema.optional(),
   telemetry: z.any().optional(),
   pricing: z.any().optional(),
+  cache: z.any().optional(),
 });
 export type SabiOptions = z.input<typeof SabiOptionsSchema>;
 
@@ -83,6 +84,7 @@ export interface ResolvedSabiOptions {
   };
   telemetry?: TelemetryHooks;
   pricing?: Record<string, ModelPricing>;
+  cache?: CacheAdapter;
 }
 
 export function resolveSabiOptions(raw: SabiOptions): ResolvedSabiOptions {
@@ -100,6 +102,7 @@ export function resolveSabiOptions(raw: SabiOptions): ResolvedSabiOptions {
     },
     telemetry: raw.telemetry as TelemetryHooks | undefined,
     pricing: raw.pricing as Record<string, ModelPricing> | undefined,
+    cache: raw.cache as CacheAdapter | undefined,
   };
 }
 
@@ -221,6 +224,34 @@ export interface FallbackMetadata {
   to: string;
   error: string;
   remainingFallbacks: number;
+}
+
+export interface CacheAdapter {
+  get(key: string): Promise<CompleteResponse | null> | CompleteResponse | null;
+  set(key: string, value: CompleteResponse, ttlMs?: number): Promise<void> | void;
+}
+
+export function cacheKey(request: CompleteRequest): string {
+  const normalized = {
+    model: request.model,
+    messages: request.messages,
+    temperature: request.temperature,
+    maxTokens: request.maxTokens,
+    topP: request.topP,
+    stop: request.stop,
+  };
+  return JSON.stringify(normalized);
+}
+
+export interface SabiPlugin {
+  name: string;
+  onCompleteRequest?: (request: CompleteRequest) => CompleteRequest | Promise<CompleteRequest>;
+  onCompleteResponse?: (
+    response: CompleteResponse,
+    request: CompleteRequest
+  ) => CompleteResponse | Promise<CompleteResponse>;
+  onStreamRequest?: (request: StreamRequest) => StreamRequest | Promise<StreamRequest>;
+  onError?: (error: Error, context: { request: CompleteRequest | StreamRequest }) => void;
 }
 
 export interface TelemetryHooks {

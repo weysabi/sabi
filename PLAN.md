@@ -67,8 +67,8 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] Anthropic provider (Claude API) — `src/providers/anthropic.ts`
 - [x] Google Gemini provider — `src/providers/google.ts`
 - [x] OpenAI-compatible handler covers Groq, Nvidia, DeepSeek, OpenRouter, Together via `baseUrl`
-- [ ] Mistral AI provider (dedicated handler)
-- [ ] Ollama provider (local models, zero config)
+- [x] Mistral AI provider (dedicated handler) — `src/providers/mistral.ts`
+- [x] Ollama provider (local models, zero config) — `src/providers/ollama.ts`
 
 ### Phase 3 — Structured Output (Shipped as v0.4.0)
 
@@ -85,15 +85,15 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] `onFailure` callback with error + metadata
 - [x] `onFallback` callback on failover
 - [x] Cost estimation — `estimatedCostUsd` in every response
-- [ ] OpenTelemetry integration pattern
-- [ ] Pluggable cache adapter (in-memory default, BYO Redis)
+- [x] OpenTelemetry integration pattern (`sabi/otel`)
+- [x] Pluggable cache adapter (`InMemoryCache`, `RedisCache`, BYO `CacheAdapter`)
 
 ### Phase 5 — Distribution (v0.8.0)
 
 - [x] Vercel AI SDK adapter (`sabi/ai-sdk`) — `LanguageModelV3`-compatible, `ProviderV3`
 - [ ] Get listed on `ai-sdk.dev/providers/community-providers`
 - [ ] CLI: `bunx sabi test` — verify provider keys, benchmark latency
-- [ ] Middleware/plugin system — `sabi.use(hook)` for extensions
+- [x] Middleware/plugin system — `sabi.use(plugin)` with lifecycle hooks
 
 ### Phase 6 — RAG & Memory (v1.0.0)
 

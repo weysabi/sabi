@@ -50,6 +50,16 @@
       "types": "./src/ai-sdk.ts",
       "import": "./src/ai-sdk.ts",
       "default": "./src/ai-sdk.ts"
+    },
+    "./otel": {
+      "types": "./src/otel.ts",
+      "import": "./src/otel.ts",
+      "default": "./src/otel.ts"
+    },
+    "./cache": {
+      "types": "./src/cache.ts",
+      "import": "./src/cache.ts",
+      "default": "./src/cache.ts"
     }
   },
   "files": [

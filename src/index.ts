@@ -9,7 +9,9 @@ import type {
   Message,
   ToolDefinition,
   HandlerMessage,
+  SabiPlugin,
 } from "./types";
+import { cacheKey } from "./types";
 import {
   ProviderConfigSchema,
   SabiOptionsSchema,
@@ -63,6 +65,11 @@ export type {
   FallbackMetadata,
 } from "./types";
 
+export type { SabiPlugin, CacheAdapter } from "./types";
+export { cacheKey } from "./types";
+export { InMemoryCache, RedisCache } from "./cache";
+export type { RedisLikeClient } from "./cache";
+
 export {
   SabiError,
   AllModelsFailedError,
@@ -87,6 +94,7 @@ export interface Sabi {
   render(name: string, inputs: Record<string, string>): string;
   complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>>;
   stream(request: StreamRequest): AsyncIterable<StreamChunk>;
+  use(plugin: SabiPlugin): void;
 }
 
 class SabiImpl implements Sabi {
@@ -94,6 +102,7 @@ class SabiImpl implements Sabi {
   private prompts: PromptRegistry;
   private opts: ResolvedSabiOptions;
   private readonly log: Catalog;
+  private plugins: SabiPlugin[] = [];
 
   constructor(providers: Record<string, ProviderConfig>, options: SabiOptions = {}) {
     SabiOptionsSchema.parse(options);
@@ -105,6 +114,10 @@ class SabiImpl implements Sabi {
       this.providers.set(name, new ProviderClient(name, validated, this.opts));
     }
     this.prompts = new PromptRegistry(options.prompts);
+  }
+
+  use(plugin: SabiPlugin): void {
+    this.plugins.push(plugin);
   }
 
   prompt(name: string, template: string): void;
@@ -121,6 +134,47 @@ class SabiImpl implements Sabi {
   }
 
   async complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>> {
+    let currentRequest = request;
+    for (const plugin of this.plugins) {
+      if (plugin.onCompleteRequest) {
+        currentRequest = await plugin.onCompleteRequest(currentRequest);
+      }
+    }
+
+    const cache = this.opts.cache;
+    if (cache) {
+      const key = cacheKey(currentRequest);
+      const cached = await cache.get(key);
+      if (cached) {
+        return cached as CompleteResponse<T>;
+      }
+    }
+
+    try {
+      let response = await this.runComplete<T>(currentRequest);
+      for (const plugin of this.plugins) {
+        if (plugin.onCompleteResponse) {
+          response = (await plugin.onCompleteResponse(
+            response,
+            currentRequest
+          )) as CompleteResponse<T>;
+        }
+      }
+      if (cache) {
+        const key = cacheKey(currentRequest);
+        await cache.set(key, response);
+      }
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      for (const plugin of this.plugins) {
+        plugin.onError?.(error, { request: currentRequest });
+      }
+      throw err;
+    }
+  }
+
+  private async runComplete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>> {
     const parsed = CompleteRequestSchema.parse(request);
     const messages: HandlerMessage[] = this.resolveMessages(parsed);
     const models = [parsed.model, ...(parsed.fallbacks ?? [])];
@@ -336,6 +390,25 @@ class SabiImpl implements Sabi {
   }
 
   async *stream(request: StreamRequest): AsyncIterable<StreamChunk> {
+    let currentRequest = request;
+    for (const plugin of this.plugins) {
+      if (plugin.onStreamRequest) {
+        currentRequest = await plugin.onStreamRequest(currentRequest);
+      }
+    }
+
+    try {
+      yield* this.runStream(currentRequest);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      for (const plugin of this.plugins) {
+        plugin.onError?.(error, { request: currentRequest });
+      }
+      throw err;
+    }
+  }
+
+  private async *runStream(request: StreamRequest): AsyncIterable<StreamChunk> {
     const parsed = StreamRequestSchema.parse(request);
     if (parsed.tools && parsed.tools.length > 0) {
       throw new SabiError(
