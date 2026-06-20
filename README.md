@@ -36,6 +36,7 @@ const result = await sabi.complete({
 | Prompt templates with `{variable}`                                     | ✅     |
 | Circuit breaker + retry + backoff                                      | ✅     |
 | Provider failover (primary → fallbacks)                                | ✅     |
+| Auto-routing (model array sugar — `["cheap", "gpt-4o"]`)              | ✅     |
 | Streaming (SSE, async iterable)                                        | ✅     |
 | Client-side `readStream` helper                                        | ✅     |
 | Structured output (Zod schemas)                                        | ✅     |
@@ -51,6 +52,7 @@ const result = await sabi.complete({
 | CLI (`sabi init`, `complete`, `stream`, `config`, `prompt`, etc.)      | ✅     |
 | RAG (zero-config, local or cloud)                                      | ✅     |
 | Memory & conversations (persistent sessions, auto-truncation)          | ✅     |
+| ChatSDK (prepare + call + record in one)                              | ✅     |
 | Guardrails (PII, content filter)                                       | 🔜     |
 | Eval suites                                                            | 🔜     |
 | Cloud dashboard                                                        | 🔜     |
@@ -396,36 +398,62 @@ await memory.deleteSession("user-abc");
 | Pluggable store | Implement `StoreInterface` for any backend |
 | Zero dependency | Built-in SQLite via Bun |
 
-> **Coming soon — `ChatSDK`** — A higher-level convenience layer that wraps `ConversationMemory` with provider-native chat adapters.
->
-> ```ts
-> // Sketch — not yet implemented
-> const chat = new ChatSDK("remba", {
->   apiKey: "...",
->   memory: new ConversationMemory({ dbPath: ".sabi/chat.db" }),
-> });
->
-> // Single call — prepare + API call + record
-> const res = await chat.chat("session-1", {
->   message: "Hello",
->   system: "You are helpful",
->   model: "remba-model-v1",
-> });
-> console.log(res.content);
->
-> // Streaming
-> for await (const chunk of chat.stream("session-1", { message: "Tell me a story", model: "..." })) {
->   process.stdout.write(chunk.text);
-> }
->
-> // BYO provider adapter
-> const chat = new ChatSDK("custom", {
->   baseUrl: "https://models.internal.example/chat",
->   headers: { Authorization: "Bearer sk-..." },
->   format: "openai",
->   memory,
-> });
-> ```
+### ChatSDK (Higher-level convenience)
+
+Wraps `ConversationMemory` with a provider adapter for prepare + call + record in one call.
+
+```ts
+import { ConversationMemory, ChatSDK, OpenAIAdapter } from "@weysabi/sabi/chat";
+
+const memory = new ConversationMemory({ dbPath: ".sabi/chat.db" });
+
+const chat = new ChatSDK({
+  memory,
+  adapter: new OpenAIAdapter({ apiKey: process.env.OPENAI_API_KEY }),
+});
+
+// Single call — prepare + API call + record
+const res = await chat.chat("session-1", {
+  message: "Hello",
+  system: "You are helpful",
+  model: "gpt-4o",
+});
+console.log(res.content);
+
+// Streaming
+for await (const chunk of chat.stream("session-1", {
+  message: "Tell me a story",
+  model: "gpt-4o",
+})) {
+  process.stdout.write(chunk.text);
+}
+
+// BYO adapter — implement ChatAdapter interface
+import type { ChatAdapter } from "@weysabi/sabi/chat";
+class CustomAdapter implements ChatAdapter {
+  async chat(model, messages, system) { /* ... */ }
+  async *stream(model, messages, system) { /* ... */ }
+}
+```
+
+| Feature | Detail |
+|---|---|
+| `chat()` | prepare + provider call + record in one call |
+| `stream()` | Same as `chat()` but streaming |
+| `ChatAdapter` | ~20 lines to support any API |
+| Ships with | `OpenAIAdapter`, `AnthropicAdapter` examples |
+
+### Auto-routing (model fallback)
+
+Pass an array — fails through to the next on error.
+
+```ts
+const res = await chat.chat("session-1", {
+  message: "Hello",
+  model: ["groq/llama-4-scout", "openai/gpt-4o"],
+});
+// tries groq first; on failure, falls back to gpt-4o
+```
 
 ### Postgres Store
 

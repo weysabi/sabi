@@ -123,7 +123,7 @@ const ToolDefinitionSchema = z.object({
 });
 
 export const CompleteRequestSchema = z.object({
-  model: z.string().min(1),
+  model: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
   messages: z.array(MessageSchema).min(1).optional(),
   prompt: z.string().optional(),
   inputs: z.record(z.string(), z.string()).optional(),
@@ -166,7 +166,7 @@ export interface ProviderCallResult {
 }
 
 export const StreamRequestSchema = z.object({
-  model: z.string().min(1),
+  model: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
   messages: z.array(MessageSchema).min(1).optional(),
   prompt: z.string().optional(),
   inputs: z.record(z.string(), z.string()).optional(),

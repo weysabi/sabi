@@ -163,10 +163,10 @@ class SabiImpl implements Sabi {
   }
 
   async complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>> {
-    let currentRequest = request;
+    let currentRequest = this.normalizeModels(request);
     for (const plugin of this.plugins) {
       if (plugin.onCompleteRequest) {
-        currentRequest = await plugin.onCompleteRequest(currentRequest);
+        currentRequest = await plugin.onCompleteRequest(currentRequest) as CompleteRequest;
       }
     }
 
@@ -443,10 +443,10 @@ class SabiImpl implements Sabi {
   }
 
   async *stream(request: StreamRequest): AsyncIterable<StreamChunk> {
-    let currentRequest = request;
+    let currentRequest = this.normalizeModels(request);
     for (const plugin of this.plugins) {
       if (plugin.onStreamRequest) {
-        currentRequest = await plugin.onStreamRequest(currentRequest);
+        currentRequest = await plugin.onStreamRequest(currentRequest) as StreamRequest;
       }
     }
 
@@ -536,6 +536,18 @@ class SabiImpl implements Sabi {
     });
 
     throw new AllModelsFailedError(parsed.model, parsed.fallbacks ?? [], errors);
+  }
+
+  private normalizeModels(request: CompleteRequest | StreamRequest): CompleteRequest | StreamRequest {
+    if (Array.isArray(request.model)) {
+      const [primary, ...rest] = request.model;
+      return {
+        ...request,
+        model: primary!,
+        fallbacks: [...rest, ...(request.fallbacks ?? [])],
+      };
+    }
+    return request;
   }
 
   private resolveMessages(req: CompleteRequest | StreamRequest): HandlerMessage[] {

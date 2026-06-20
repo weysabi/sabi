@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Auto-routing sugar** — `model` accepts `string | string[]`. When an array, elements after the first become fallbacks. `model: ["groq/cheap", "openai/gpt-4o"]` chains automatically
 - **ChatSDK** — `ChatSDK` class wraps `ConversationMemory` + `ChatAdapter` for prepare+call+record in one `chat()` / `stream()` call
 - **ChatAdapter interface** — public interface, users write ~20 lines for any API. Ships OpenAI + Anthropic examples
 - **`sabi/chat` exports** — `ChatSDK`, `OpenAIAdapter`, `AnthropicAdapter`, `ChatAdapter` type
