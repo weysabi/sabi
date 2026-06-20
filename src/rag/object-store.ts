@@ -1,3 +1,4 @@
+import type { Database } from "bun:sqlite";
 import { mkdirSync, existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync, statSync } from "fs";
 import { join, resolve, dirname, relative } from "path";
 
@@ -75,10 +76,10 @@ export class FsObjectStore implements ObjectStore {
 }
 
 export class SqliteObjectStore implements ObjectStore {
-  private db: import("bun:sqlite").Database;
+  private db: Database;
   private tableName: string;
 
-  constructor(db: import("bun:sqlite").Database, tableName: string = "objects") {
+  constructor(db: Database, tableName: string = "objects") {
     this.db = db;
     this.tableName = tableName;
     this.db.run(

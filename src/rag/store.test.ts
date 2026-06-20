@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { unlinkSync, existsSync } from "fs";
+import { unlinkSync } from "fs";
 import { RagStore } from "./store";
 import { generateId } from "../utils";
 
@@ -9,13 +9,13 @@ describe("RagStore", () => {
   let store: RagStore;
 
   beforeEach(() => {
-    try { unlinkSync(TEST_DB); } catch {}
+    try { unlinkSync(TEST_DB); } catch { /* db may not exist */ }
     store = new RagStore({ dbPath: TEST_DB });
   });
 
   afterEach(() => {
     store.close();
-    try { unlinkSync(TEST_DB); } catch {}
+    try { unlinkSync(TEST_DB); } catch { /* db may not exist */ }
   });
 
   it("starts empty", () => {

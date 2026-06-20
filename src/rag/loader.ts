@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync, existsSync } from "fs";
-import { extname, resolve, basename } from "path";
+import { extname, resolve } from "path";
 
 export interface LoadedFile {
   path: string;

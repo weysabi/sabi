@@ -1,5 +1,9 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { cosineSimilarity } from "./store";
+
+function vecPath(path: string): string {
+  return path.replace(/\.hnsw\.idx$/u, ".hnsw.vec");
+}
 
 export type DistanceFn = (a: Float32Array, b: Float32Array) => number;
 
@@ -147,6 +151,7 @@ export class HnswVectorIndex {
     let current = entryId;
     let bestDist = this.distance(query, this.nodes.get(current)!.vector);
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       let improved = false;
       const node = this.nodes.get(current)!;
@@ -233,13 +238,19 @@ export class HnswVectorIndex {
   }
 
   save(path: string, meta: Record<string, unknown> = {}): void {
+    const vp = vecPath(path);
     const graph: SavedIndex["graph"] = [];
+    const buf = new Float32Array(this.nodes.size * this.numDimensions);
+    let offset = 0;
+
     for (const [id, node] of this.nodes) {
       graph.push({
         id,
         level: node.level,
         neighbors: node.neighbors.map((layer) => [...layer]),
       });
+      buf.set(node.vector, offset);
+      offset += this.numDimensions;
     }
 
     const saved: SavedIndex = {
@@ -257,12 +268,14 @@ export class HnswVectorIndex {
         mL: this.mL,
       },
       graph,
+      vecSize: buf.byteLength,
     };
 
     writeFileSync(path, JSON.stringify(saved), "utf-8");
+    writeFileSync(vp, Buffer.from(buf.buffer));
   }
 
-  load(path: string): SavedIndex {
+  load(path: string): { restored: boolean; meta: Record<string, unknown> } {
     const raw = readFileSync(path, "utf-8");
     const saved = JSON.parse(raw) as SavedIndex;
 
@@ -277,16 +290,36 @@ export class HnswVectorIndex {
     this.entryPoint = saved.entryPoint;
     this.maxLevel = saved.maxLevel;
 
+    const vp = vecPath(path);
+    let vectorsLoaded = false;
+    let vecData: Float32Array | null = null;
+
+    if (existsSync(vp)) {
+      try {
+        const bin = readFileSync(vp);
+        vecData = new Float32Array(bin.buffer, bin.byteOffset, bin.byteLength / 4);
+        vectorsLoaded = true;
+      } catch {
+        // fall through
+      }
+    }
+
+    let idx = 0;
     for (const g of saved.graph) {
+      const vec = vectorsLoaded && vecData
+        ? vecData.subarray(idx * this.numDimensions, (idx + 1) * this.numDimensions)
+        : new Float32Array(this.numDimensions);
+
       this.nodes.set(g.id, {
         id: g.id,
-        vector: new Float32Array(this.numDimensions),
+        vector: vec,
         neighbors: g.neighbors.map((layer) => [...layer]),
         level: g.level,
       });
+      idx++;
     }
 
-    return saved;
+    return { restored: vectorsLoaded, meta: saved.meta };
   }
 
   getNodeVector(id: string): Float32Array | undefined {
@@ -338,6 +371,7 @@ export interface SavedIndex {
     level: number;
     neighbors: string[][];
   }>;
+  vecSize: number;
 }
 
 class BinaryHeap<T> {
@@ -392,6 +426,7 @@ class BinaryHeap<T> {
 
   private sinkDown(idx: number): void {
     const length = this.items.length;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       let smallest = idx;
       const left = 2 * idx + 1;

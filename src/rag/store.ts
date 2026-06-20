@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from "fs";
+import { mkdirSync, existsSync } from "fs";
 import { dirname, resolve } from "path";
 import type { RagChunk, RagSearchResult } from "./types";
-import { HnswVectorIndex } from "./vector-index";
+import type { HnswVectorIndex } from "./vector-index";
 import type { ObjectStore } from "./object-store";
 
 export interface StoredFile {
@@ -120,10 +120,15 @@ export class RagStore {
   }
 
   private loadIndex(): void {
+    const needsEmbeds = !this.vectorIndex;
+
     const rows = this.db
       .query(
-        `SELECT c.id, c.file_id, c.chunk_index, c.content, c.tokens, c.embedding, f.path as file_path
-         FROM chunks c JOIN files f ON c.file_id = f.id`
+        needsEmbeds
+          ? `SELECT c.id, c.file_id, c.chunk_index, c.content, c.tokens, c.embedding, f.path as file_path
+             FROM chunks c JOIN files f ON c.file_id = f.id`
+          : `SELECT c.id, c.file_id, c.chunk_index, c.content, c.tokens, NULL as embedding, f.path as file_path
+             FROM chunks c JOIN files f ON c.file_id = f.id`
       )
       .all() as Array<{
       id: string;
@@ -144,7 +149,7 @@ export class RagStore {
         content: r.content ?? "",
         tokens: r.tokens,
         filePath: r.file_path,
-        embedding: r.embedding ? new Float32Array(r.embedding.buffer) : null,
+        embedding: needsEmbeds && r.embedding ? new Float32Array(r.embedding.buffer) : null,
       });
     }
 
@@ -152,24 +157,27 @@ export class RagStore {
 
     const restored = this.tryRestoreIndex();
     if (restored) return;
-
-    this.rebuildVectorIndex();
+    if (needsEmbeds) {
+      this.rebuildVectorIndex();
+    }
   }
 
   private tryRestoreIndex(): boolean {
     if (!existsSync(this.indexPath)) return false;
 
     try {
-      const saved = this.vectorIndex!.load(this.indexPath);
-      const savedVersion = saved.meta?.indexVersion ?? -1;
+      const { restored, meta } = this.vectorIndex!.load(this.indexPath);
+      if (!restored) return false;
+
+      const savedVersion = (meta?.indexVersion ?? -1) as number;
       if (savedVersion !== this.indexVersion) return false;
 
       const storedCount = (
         this.db
-          .query(`SELECT COUNT(*) as count FROM chunks WHERE embedding IS NOT NULL`)
+          .query(`SELECT COUNT(*) as count FROM chunks`)
           .get() as { count: number }
       ).count;
-      if (saved.graph.length !== storedCount) return false;
+      if (this.vectorIndex!.size() !== storedCount) return false;
 
       return true;
     } catch {
