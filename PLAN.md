@@ -97,12 +97,17 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 
 ### Phase 6 — RAG & Memory (v1.0.0)
 
-- [ ] `sabi.rag.load(source)` — ingest URLs, PDFs, markdown
-- [ ] `sabi.rag.query()` — auto-retrieve relevant context
-- [ ] Local vector store (SQLite + HNSW, zero deps)
-- [ ] Embedding support — `sabi.embed()` with failover
+- [x] `RagEngine` — ingest files, directories, raw text; query with vector search
+- [x] `RagManager` — multi-project lifecycle, cross-project `queryAll()`
+- [x] Local vector store (SQLite + HNSW, zero deps) — persists as `.hnsw.idx` + `.hnsw.vec`
+- [x] Embedding support — `embedText()` / `embedBatch()` with configurable batch size
+- [x] Query filters — `path`, `pathPrefix`, `fileId` scoping
+- [x] Streaming ingestion — `loadStream()` yields progress events
+- [x] WAL-mode SQLite, 64KB pages, mmap, configurable pragmas
+- [x] Pluggable object store (`FsObjectStore`, `SqliteObjectStore`, BYO)
 - [ ] `sabi.chat({ sessionId })` — persistent conversation history
 - [ ] Automatic summarization for long conversations
+- [ ] PDF / URL ingestion
 
 ### Phase 7 — Guardrails (v1.1.0)
 
@@ -212,7 +217,18 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 │   ├── ai-sdk.test.ts           # AI SDK adapter tests
 │   ├── providers.test.ts        # Provider-specific tests
 │   ├── stream.test.ts           # Streaming tests
-│   └── structured.test.ts       # Structured output tests
+│   ├── structured.test.ts       # Structured output tests
+│   └── rag/
+│       ├── index.ts             # Barrel exports
+│       ├── engine.ts            # RagEngine — ingestion + query orchestration
+│       ├── manager.ts           # RagManager — multi-project lifecycle
+│       ├── store.ts             # RagStore — SQLite + HNSW persistence
+│       ├── vector-index.ts      # HnswVectorIndex — ANN search
+│       ├── chunker.ts           # splitText — recursive text splitting
+│       ├── embedder.ts          # embedText / embedBatch — API calls
+│       ├── loader.ts            # File discovery (text, markdown, code)
+│       ├── object-store.ts      # FsObjectStore / SqliteObjectStore
+│       └── types.ts             # RagOptions, RagChunk, etc.
 ├── package.json
 ├── tsconfig.json
 ├── bunfig.toml

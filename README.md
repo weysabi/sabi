@@ -49,7 +49,7 @@ const result = await sabi.complete({
 | Vercel AI SDK adapter (`sabi/ai-sdk`)                                  | ✅     |
 | Mistral + Ollama providers                                             | ✅     |
 | CLI (`sabi init`, `complete`, `stream`, `config`, `prompt`, etc.)      | ✅     |
-| RAG (zero-config, local or cloud)                                      | 🔜     |
+| RAG (zero-config, local or cloud)                                      | ✅     |
 | Memory & conversations                                                 | 🔜     |
 | Guardrails (PII, content filter)                                       | 🔜     |
 | Eval suites                                                            | 🔜     |
@@ -273,7 +273,71 @@ import { pipe } from "@weysabi/sabi/express";
 import { InMemoryCache, RedisCache } from "@weysabi/sabi/cache";
 import { createOtelPlugin } from "@weysabi/sabi/otel";
 import { createSabiProvider } from "@weysabi/sabi/ai-sdk";
+import { RagEngine, RagManager, HnswVectorIndex, FsObjectStore } from "@weysabi/sabi/rag";
 ```
+
+## RAG (Retrieval-Augmented Generation)
+
+Zero-dependency RAG built in. Ingest documents, auto-chunk, embed, and search — no external vector DB required.
+
+```ts
+import { RagEngine, RagManager } from "@weysabi/sabi/rag";
+
+// Single project
+const rag = new RagEngine({ 
+  dbPath: ".sabi/my-docs.db",
+  embeddingModel: "openai/text-embedding-3-small",
+});
+
+// Must configure an embedding provider
+rag.setProviders(
+  { provider: "openai", apiKey: process.env.OPENAI_API_KEY },
+  { openai: { apiKey: process.env.OPENAI_API_KEY } }
+);
+
+// Ingest files
+await rag.load("docs/manual.pdf", "docs/readme.md");
+
+// Search
+const results = await rag.query("How do I reset the device?");
+
+// Multi-project manager
+const manager = new RagManager({ 
+  basePath: ".sabi/rag/projects",
+  providers: { embeddingProvider: { provider: "openai", apiKey: "..." } },
+});
+const docs = manager.project("docs-v2");
+await docs.load("guides/");
+
+// Scoped search
+const hits = await docs.query("pricing", 5, { pathPrefix: "guides/api" });
+
+// Streaming ingestion with progress
+for await (const ev of docs.loadStream("large-directory/")) {
+  if (ev.type === "file_done") console.log(`${ev.filePath}: ${ev.chunks} chunks`);
+}
+```
+
+### Architecture
+
+| Component | File | What |
+|---|---|---|
+| `RagEngine` | `src/rag/engine.ts` | Orchestrates ingestion, embedding, query |
+| `RagManager` | `src/rag/manager.ts` | Multi-project lifecycle, cross-project search |
+| `RagStore` | `src/rag/store.ts` | SQLite + HNSW persistence, WAL-mode at scale |
+| `HnswVectorIndex` | `src/rag/vector-index.ts` | In-memory approximate nearest neighbor (HNSW algorithm) |
+| `splitText` | `src/rag/chunker.ts` | Recursive text splitting with configurable overlap |
+| `embedText` / `embedBatch` | `src/rag/embedder.ts` | OpenAI-compatible embedding API calls |
+| `FsObjectStore` / `SqliteObjectStore` | `src/rag/object-store.ts` | Pluggable content storage (disk, SQLite, S3) |
+| `loadFile` / `loadDirectory` / `loadText` | `src/rag/loader.ts` | File discovery (PDF, markdown, code, text) |
+
+### Scale
+
+- **WAL-mode SQLite** with 64MB cache, memory-mapped I/O, and 64KB pages
+- **HNSW vector index** persists to `.hnsw.idx` + `.hnsw.vec` binary files for instant startup
+- **Embedding batch size** configurable (default 512) to stay under API limits
+- **Object store** can offload chunk content from SQLite to disk or S3
+- **Brute-force fallback** when no vector index configured (for small corpuses)
 
 ## Philosophy
 
