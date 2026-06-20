@@ -50,6 +50,8 @@ export class ProviderClient {
   };
   private readonly opts: ResolvedSabiOptions;
   private readonly log: Catalog;
+  private readonly configTimeout?: number;
+  private readonly configRetry?: ProviderConfig["retry"];
 
   constructor(name: string, config: ProviderConfig, opts: ResolvedSabiOptions) {
     this.name = name;
@@ -58,6 +60,20 @@ export class ProviderClient {
     this.handler = getHandler(name);
     this.opts = opts;
     this.log = createModuleLogger(`providers.${name}`);
+    this.configTimeout = config.timeout;
+    this.configRetry = config.retry;
+  }
+
+  private get timeout(): number {
+    return this.configTimeout ?? this.opts.timeout;
+  }
+
+  private get retryConfig(): { maxRetries: number; statusCodes: number[]; backoffMs: number } {
+    return {
+      maxRetries: this.configRetry?.maxRetries ?? this.opts.retry.maxRetries,
+      statusCodes: this.configRetry?.statusCodes ?? this.opts.retry.statusCodes,
+      backoffMs: this.configRetry?.backoffMs ?? this.opts.retry.backoffMs,
+    };
   }
 
   async complete(
@@ -77,11 +93,12 @@ export class ProviderClient {
     this.checkCircuitBreaker();
     const hooks = this.opts.telemetry;
 
+    const { maxRetries, statusCodes, backoffMs } = this.retryConfig;
     let lastError: Error | undefined;
 
-    for (let attempt = 0; attempt <= this.opts.retry.maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       if (attempt > 0) {
-        const backoff = this.opts.retry.backoffMs * Math.pow(2, attempt - 1);
+        const backoff = backoffMs * Math.pow(2, attempt - 1);
         this.log.warn({
           message: `Retrying ${this.name}/${modelId} after ${backoff}ms`,
           model: modelId,
@@ -127,11 +144,11 @@ export class ProviderClient {
           error: lastError.message,
         });
 
-        const isLastAttempt = attempt === this.opts.retry.maxRetries;
+        const isLastAttempt = attempt === maxRetries;
         let willRetry = true;
 
         if (err instanceof ProviderRequestError) {
-          const shouldRetry = this.opts.retry.statusCodes.includes(err.statusCode ?? 0);
+          const shouldRetry = statusCodes.includes(err.statusCode ?? 0);
           if (!shouldRetry || isLastAttempt) {
             willRetry = false;
             this.onFailure();
@@ -198,7 +215,8 @@ export class ProviderClient {
     });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), params.timeout);
+    const timeout = this.timeout;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(url, {
@@ -237,7 +255,7 @@ export class ProviderClient {
           this.name,
           modelId,
           undefined,
-          `Request timed out after ${params.timeout}ms`
+          `Request timed out after ${timeout}ms`
         );
       }
       throw new ProviderRequestError(
@@ -324,8 +342,9 @@ export class ProviderClient {
       stream: true,
     });
 
+    const timeout = this.timeout;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), params.timeout);
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(url, {
@@ -394,7 +413,7 @@ export class ProviderClient {
         hooks?.onFailure?.({
           model: `${this.name}/${modelId}`,
           provider: this.name,
-          error: `Stream timed out after ${params.timeout}ms`,
+          error: `Stream timed out after ${timeout}ms`,
           attempt: 0,
           timestamp: Date.now(),
           willRetry: false,
@@ -403,7 +422,7 @@ export class ProviderClient {
           this.name,
           modelId,
           undefined,
-          `Stream timed out after ${params.timeout}ms`
+          `Stream timed out after ${timeout}ms`
         );
       }
       hooks?.onFailure?.({

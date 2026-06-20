@@ -41,9 +41,17 @@ export interface ToolResultMessage {
 
 export type HandlerMessage = Message | ToolCallMessage | ToolResultMessage;
 
+const ProviderRetrySchema = z.object({
+  maxRetries: z.number().int().min(0).max(10).optional(),
+  statusCodes: z.array(z.number().int()).optional(),
+  backoffMs: z.number().int().min(100).optional(),
+});
+
 export const ProviderConfigSchema = z.object({
   apiKey: z.string().min(1),
   baseUrl: z.string().url().optional(),
+  timeout: z.number().int().positive().optional(),
+  retry: ProviderRetrySchema.optional(),
 });
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 
