@@ -38,6 +38,12 @@ export interface RagSearchResult {
   score: number;
 }
 
+export interface RagQueryFilter {
+  path?: string;
+  pathPrefix?: string;
+  fileId?: string;
+}
+
 export interface LoadResult {
   fileId: string;
   filePath: string;
