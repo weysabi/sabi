@@ -105,8 +105,9 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] Streaming ingestion — `loadStream()` yields progress events
 - [x] WAL-mode SQLite, 64KB pages, mmap, configurable pragmas
 - [x] Pluggable object store (`FsObjectStore`, `SqliteObjectStore`, BYO)
-- [ ] `sabi.chat({ sessionId })` — persistent conversation history
-- [ ] Automatic summarization for long conversations
+- [x] `ConversationMemory` — provider-agnostic session persistence + auto‑truncation
+- [x] `StoreInterface` — pluggable backend: SQLite (default), Postgres (BYO `postgres` client), or custom
+- [ ] Automatic summarization for long conversations (Phase 7)
 - [ ] PDF / URL ingestion
 
 ### Phase 7 — Guardrails (v1.1.0)
@@ -229,6 +230,13 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 │       ├── loader.ts            # File discovery (text, markdown, code)
 │       ├── object-store.ts      # FsObjectStore / SqliteObjectStore
 │       └── types.ts             # RagOptions, RagChunk, etc.
+│   └── chat/
+│       ├── index.ts             # Barrel exports
+│       ├── memory.ts            # ConversationMemory — session + context manager
+│       ├── store.ts             # SqliteSessionStore — SQLite persistence
+│       ├── pg-store.ts          # PgSessionStore — Postgres persistence
+│       ├── memory.test.ts       # Chat tests
+│       └── types.ts             # StoreInterface, MemoryOptions, PrepareResult, etc.
 ├── package.json
 ├── tsconfig.json
 ├── bunfig.toml

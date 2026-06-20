@@ -71,6 +71,8 @@ export { cacheKey } from "./types";
 export { InMemoryCache, RedisCache } from "./cache";
 export type { RedisLikeClient } from "./cache";
 export { RagEngine } from "./rag/engine";
+export { ConversationMemory, SqliteSessionStore, PgSessionStore } from "./chat";
+export type { StoreInterface } from "./chat";
 
 export {
   SabiError,

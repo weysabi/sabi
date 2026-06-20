@@ -50,7 +50,7 @@ const result = await sabi.complete({
 | Mistral + Ollama providers                                             | ✅     |
 | CLI (`sabi init`, `complete`, `stream`, `config`, `prompt`, etc.)      | ✅     |
 | RAG (zero-config, local or cloud)                                      | ✅     |
-| Memory & conversations                                                 | 🔜     |
+| Memory & conversations (persistent sessions, auto-truncation)          | ✅     |
 | Guardrails (PII, content filter)                                       | 🔜     |
 | Eval suites                                                            | 🔜     |
 | Cloud dashboard                                                        | 🔜     |
@@ -274,6 +274,7 @@ import { InMemoryCache, RedisCache } from "@weysabi/sabi/cache";
 import { createOtelPlugin } from "@weysabi/sabi/otel";
 import { createSabiProvider } from "@weysabi/sabi/ai-sdk";
 import { RagEngine, RagManager, HnswVectorIndex, FsObjectStore } from "@weysabi/sabi/rag";
+import { ConversationMemory } from "@weysabi/sabi/chat";
 ```
 
 ## RAG (Retrieval-Augmented Generation)
@@ -330,6 +331,125 @@ for await (const ev of docs.loadStream("large-directory/")) {
 | `embedText` / `embedBatch` | `src/rag/embedder.ts` | OpenAI-compatible embedding API calls |
 | `FsObjectStore` / `SqliteObjectStore` | `src/rag/object-store.ts` | Pluggable content storage (disk, SQLite, S3) |
 | `loadFile` / `loadDirectory` / `loadText` | `src/rag/loader.ts` | File discovery (PDF, markdown, code, text) |
+
+## Chat & Memory
+
+Provider-agnostic conversation memory with automatic context management. Persist sessions to SQLite, then call your provider SDK natively.
+
+```ts
+import { ConversationMemory } from "@weysabi/sabi/chat";
+
+const memory = new ConversationMemory({
+  dbPath: ".sabi/chat.db",
+  maxHistoryTokens: 16384,
+});
+
+// Prepare context — no API call
+const ctx = memory.prepare("user-abc", {
+  message: "Hi, my name is Bob",
+  system: "You are a helpful assistant",
+});
+// ctx.messages = [{ role: "user", content: "Hi, my name is Bob" }]
+// ctx.system   = "You are a helpful assistant"
+// ctx.historyTruncated = false
+
+// Call provider SDK natively (e.g. Anthropic)
+const response = await anthropic.messages.create({
+  model: "claude-3-5-sonnet-20241022",
+  system: ctx.system,
+  messages: ctx.messages,
+});
+
+// Save the turn after success
+memory.record("user-abc", {
+  userMessage: { content: "Hi, my name is Bob" },
+  assistantMessage: { content: response.content[0].text },
+});
+
+// Second turn — history is automatically included
+const ctx2 = memory.prepare("user-abc", {
+  message: "What's my name?",
+});
+// ctx2.messages = [
+//   { role: "user", content: "Hi, my name is Bob" },
+//   { role: "assistant", content: "Nice to meet you, Bob!" },
+//   { role: "user", content: "What's my name?" },
+// ]
+
+// Inspect session
+const session = await memory.getSession("user-abc");
+console.log(session?.messageCount); // total messages
+
+// Browse sessions
+const sessions = await memory.listSessions();
+
+// Delete
+await memory.deleteSession("user-abc");
+```
+
+| Feature | Detail |
+|---|---|
+| Persistence | SQLite (default) or Postgres (BYO `postgres` client) |
+| Context window | Auto-truncates old messages when `maxHistoryTokens` exceeded |
+| Provider-agnostic | Works with any SDK (OpenAI, Anthropic, Cohere, self-hosted) |
+| Session management | `getSession()`, `listSessions()`, `deleteSession()` |
+| Pluggable store | Implement `StoreInterface` for any backend |
+| Zero dependency | Built-in SQLite via Bun |
+
+> **Coming soon — `ChatSDK`** — A higher-level convenience layer that wraps `ConversationMemory` with provider-native chat adapters.
+>
+> ```ts
+> // Sketch — not yet implemented
+> const chat = new ChatSDK("remba", {
+>   apiKey: "...",
+>   memory: new ConversationMemory({ dbPath: ".sabi/chat.db" }),
+> });
+>
+> // Single call — prepare + API call + record
+> const res = await chat.chat("session-1", {
+>   message: "Hello",
+>   system: "You are helpful",
+>   model: "remba-model-v1",
+> });
+> console.log(res.content);
+>
+> // Streaming
+> for await (const chunk of chat.stream("session-1", { message: "Tell me a story", model: "..." })) {
+>   process.stdout.write(chunk.text);
+> }
+>
+> // BYO provider adapter
+> const chat = new ChatSDK("custom", {
+>   baseUrl: "https://models.internal.example/chat",
+>   headers: { Authorization: "Bearer sk-..." },
+>   format: "openai",
+>   memory,
+> });
+> ```
+
+### Postgres Store
+
+Swap SQLite for Postgres in production — same API, one import change.
+
+```ts
+import postgres from "postgres";
+import { ConversationMemory, PgSessionStore } from "@weysabi/sabi/chat";
+
+const sql = postgres("postgres://user:pass@host:5432/db");
+const memory = new ConversationMemory({
+  store: new PgSessionStore(sql),
+});
+```
+
+Or bring your own store:
+
+```ts
+import type { StoreInterface } from "@weysabi/sabi/chat";
+
+class RedisStore implements StoreInterface {
+  // implement all methods — async, same interface
+}
+```
 
 ### Scale
 
