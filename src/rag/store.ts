@@ -106,9 +106,9 @@ export class RagStore {
         value TEXT NOT NULL
       )
     `);
-    const row = this.db
-      .query(`SELECT value FROM _rag_meta WHERE key = 'index_version'`)
-      .get() as { value: string } | undefined;
+    const row = this.db.query(`SELECT value FROM _rag_meta WHERE key = 'index_version'`).get() as
+      | { value: string }
+      | undefined;
     this.indexVersion = row ? Number(row.value) : 0;
   }
 
@@ -173,9 +173,7 @@ export class RagStore {
       if (savedVersion !== this.indexVersion) return false;
 
       const storedCount = (
-        this.db
-          .query(`SELECT COUNT(*) as count FROM chunks`)
-          .get() as { count: number }
+        this.db.query(`SELECT COUNT(*) as count FROM chunks`).get() as { count: number }
       ).count;
       if (this.vectorIndex!.size() !== storedCount) return false;
 
@@ -206,9 +204,9 @@ export class RagStore {
   }
 
   hasFile(filePath: string, contentHash: string): boolean {
-    const row = this.db
-      .query(`SELECT content_hash FROM files WHERE path = ?`)
-      .get(filePath) as { content_hash: string } | undefined;
+    const row = this.db.query(`SELECT content_hash FROM files WHERE path = ?`).get(filePath) as
+      | { content_hash: string }
+      | undefined;
     return row?.content_hash === contentHash;
   }
 
@@ -232,9 +230,7 @@ export class RagStore {
 
     this.db.transaction(() => {
       for (const chunk of chunks) {
-        const embeddingBlob = chunk.embedding
-          ? Buffer.from(chunk.embedding.buffer)
-          : null;
+        const embeddingBlob = chunk.embedding ? Buffer.from(chunk.embedding.buffer) : null;
 
         if (this.storeContentInObjectStore && this.objectStore && insertLocation) {
           const storeKey = chunkContentKey(chunk.id);
@@ -242,7 +238,14 @@ export class RagStore {
           insertLocation.run(chunk.id, storeKey);
           this.objectStore.put(storeKey, new TextEncoder().encode(chunk.content));
         } else {
-          insert.run(chunk.id, chunk.fileId, chunk.chunkIndex, chunk.content, chunk.tokens, embeddingBlob);
+          insert.run(
+            chunk.id,
+            chunk.fileId,
+            chunk.chunkIndex,
+            chunk.content,
+            chunk.tokens,
+            embeddingBlob
+          );
         }
 
         if (this.vectorIndex && chunk.embedding) {
@@ -269,19 +272,24 @@ export class RagStore {
   }
 
   deleteFile(fileId: string): void {
-    const chunkIds = this.db
-      .query(`SELECT id FROM chunks WHERE file_id = ?`)
-      .all(fileId) as Array<{ id: string }>;
+    const chunkIds = this.db.query(`SELECT id FROM chunks WHERE file_id = ?`).all(fileId) as Array<{
+      id: string;
+    }>;
 
     this.db.transaction(() => {
       if (this.objectStore) {
         const locations = this.db
-          .query(`SELECT store_key FROM chunk_locations WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?)`)
+          .query(
+            `SELECT store_key FROM chunk_locations WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?)`
+          )
           .all(fileId) as Array<{ store_key: string }>;
         for (const loc of locations) {
           this.objectStore.delete(loc.store_key);
         }
-        this.db.run(`DELETE FROM chunk_locations WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?)`, [fileId]);
+        this.db.run(
+          `DELETE FROM chunk_locations WHERE chunk_id IN (SELECT id FROM chunks WHERE file_id = ?)`,
+          [fileId]
+        );
       }
       this.db.run(`DELETE FROM chunks WHERE file_id = ?`, [fileId]);
       this.db.run(`DELETE FROM files WHERE id = ?`, [fileId]);
@@ -308,7 +316,10 @@ export class RagStore {
     return this.searchBruteForce(queryEmbedding, topK, filter);
   }
 
-  private buildFilterConditions(filter?: RagQueryFilter): { clause: string; params: Array<string | number> } {
+  private buildFilterConditions(filter?: RagQueryFilter): {
+    clause: string;
+    params: Array<string | number>;
+  } {
     if (!filter) return { clause: "", params: [] };
 
     const conditions: string[] = [];
@@ -396,7 +407,9 @@ export class RagStore {
       candidates = candidates.filter((c) => {
         if (filter.path && c.filePath !== filter.path) return false;
         if (filter.pathPrefix) {
-          const prefix = filter.pathPrefix.endsWith("/") ? filter.pathPrefix : filter.pathPrefix + "/";
+          const prefix = filter.pathPrefix.endsWith("/")
+            ? filter.pathPrefix
+            : filter.pathPrefix + "/";
           if (!c.filePath.startsWith(prefix)) return false;
         }
         if (filter.fileId && c.fileId !== filter.fileId) return false;
@@ -422,19 +435,11 @@ export class RagStore {
   }
 
   totalFiles(): number {
-    return (
-      this.db
-        .query(`SELECT COUNT(*) as count FROM files`)
-        .get() as { count: number }
-    ).count;
+    return (this.db.query(`SELECT COUNT(*) as count FROM files`).get() as { count: number }).count;
   }
 
   totalChunks(): number {
-    return (
-      this.db
-        .query(`SELECT COUNT(*) as count FROM chunks`)
-        .get() as { count: number }
-    ).count;
+    return (this.db.query(`SELECT COUNT(*) as count FROM chunks`).get() as { count: number }).count;
   }
 
   close(): void {

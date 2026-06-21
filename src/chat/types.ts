@@ -3,7 +3,12 @@ export interface StoreInterface {
   getSession(sessionId: string): Promise<SessionInfo | null>;
   getOrCreateSession(sessionId: string, system?: string): Promise<SessionInfo>;
   updateSessionSystem(sessionId: string, system: string): Promise<void>;
-  addMessage(sessionId: string, role: "system" | "user" | "assistant", content: string, tokens: number): Promise<StoredMessage>;
+  addMessage(
+    sessionId: string,
+    role: "system" | "user" | "assistant",
+    content: string,
+    tokens: number
+  ): Promise<StoredMessage>;
   getHistory(sessionId: string): Promise<StoredMessage[]>;
   deleteSession(sessionId: string): Promise<void>;
   listSessions(limit?: number, offset?: number): Promise<SessionInfo[]>;

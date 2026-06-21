@@ -41,7 +41,9 @@ export class SqliteSessionStore implements StoreInterface {
         created_at TEXT NOT NULL
       )
     `);
-    this.db.run("CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id, created_at)");
+    this.db.run(
+      "CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id, created_at)"
+    );
     try {
       this.db.run("ALTER TABLE chat_sessions ADD COLUMN system TEXT");
     } catch {
@@ -60,7 +62,9 @@ export class SqliteSessionStore implements StoreInterface {
 
   async getSession(sessionId: string): Promise<SessionInfo | null> {
     const row = this.db
-      .query("SELECT id, system, created_at, updated_at, message_count, total_tokens FROM chat_sessions WHERE id = ?")
+      .query(
+        "SELECT id, system, created_at, updated_at, message_count, total_tokens FROM chat_sessions WHERE id = ?"
+      )
       .get(sessionId) as Record<string, unknown> | undefined;
     if (!row) return null;
     return {
@@ -77,7 +81,9 @@ export class SqliteSessionStore implements StoreInterface {
     const existing = await this.getSession(sessionId);
     if (existing) {
       if (system && existing.system !== system) {
-        this.db.query("UPDATE chat_sessions SET system = ?, updated_at = ? WHERE id = ?").run(system, new Date().toISOString(), sessionId);
+        this.db
+          .query("UPDATE chat_sessions SET system = ?, updated_at = ? WHERE id = ?")
+          .run(system, new Date().toISOString(), sessionId);
       }
       return { ...existing, system: system ?? existing.system };
     }
@@ -85,7 +91,9 @@ export class SqliteSessionStore implements StoreInterface {
   }
 
   async updateSessionSystem(sessionId: string, system: string): Promise<void> {
-    this.db.query("UPDATE chat_sessions SET system = ?, updated_at = ? WHERE id = ?").run(system, new Date().toISOString(), sessionId);
+    this.db
+      .query("UPDATE chat_sessions SET system = ?, updated_at = ? WHERE id = ?")
+      .run(system, new Date().toISOString(), sessionId);
   }
 
   async addMessage(
@@ -97,17 +105,23 @@ export class SqliteSessionStore implements StoreInterface {
     const id = generateId(16);
     const now = new Date().toISOString();
     this.db
-      .query("INSERT INTO chat_messages (id, session_id, role, content, tokens, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+      .query(
+        "INSERT INTO chat_messages (id, session_id, role, content, tokens, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+      )
       .run(id, sessionId, role, content, tokens, now);
     this.db
-      .query("UPDATE chat_sessions SET message_count = message_count + 1, total_tokens = total_tokens + ?, updated_at = ? WHERE id = ?")
+      .query(
+        "UPDATE chat_sessions SET message_count = message_count + 1, total_tokens = total_tokens + ?, updated_at = ? WHERE id = ?"
+      )
       .run(tokens, now, sessionId);
     return { id, sessionId, role, content, tokens, createdAt: now };
   }
 
   async getHistory(sessionId: string): Promise<StoredMessage[]> {
     const rows = this.db
-      .query("SELECT id, session_id, role, content, tokens, created_at FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC")
+      .query(
+        "SELECT id, session_id, role, content, tokens, created_at FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC"
+      )
       .all(sessionId) as Array<Record<string, unknown>>;
     return rows.map((r) => ({
       id: r.id as string,
@@ -128,7 +142,9 @@ export class SqliteSessionStore implements StoreInterface {
 
   async listSessions(limit = 50, offset = 0): Promise<SessionInfo[]> {
     const rows = this.db
-      .query("SELECT id, system, created_at, updated_at, message_count, total_tokens FROM chat_sessions ORDER BY updated_at DESC LIMIT ? OFFSET ?")
+      .query(
+        "SELECT id, system, created_at, updated_at, message_count, total_tokens FROM chat_sessions ORDER BY updated_at DESC LIMIT ? OFFSET ?"
+      )
       .all(limit, offset) as Array<Record<string, unknown>>;
     return rows.map((r) => ({
       id: r.id as string,

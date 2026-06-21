@@ -5,7 +5,14 @@ import { RagStore } from "./store";
 import { splitText } from "./chunker";
 import { embedText, embedBatch } from "./embedder";
 import { loadFile, loadDirectory, loadText, type LoadedFile } from "./loader";
-import type { RagOptions, RagChunk, RagSearchResult, LoadResult, RagQueryFilter, LoadProgressEvent } from "./types";
+import type {
+  RagOptions,
+  RagChunk,
+  RagSearchResult,
+  LoadResult,
+  RagQueryFilter,
+  LoadProgressEvent,
+} from "./types";
 import type { ProviderConfig } from "../types";
 import { DEFAULT_RAG_OPTIONS } from "./types";
 import { HnswVectorIndex } from "./vector-index";
@@ -23,7 +30,7 @@ export class RagEngine {
     embeddingBatchSize: number;
   };
   vectorIndex: HnswVectorIndex | null;
-  private embeddingProvider: ProviderConfig & { provider: string } | null = null;
+  private embeddingProvider: (ProviderConfig & { provider: string }) | null = null;
   private fallbackProviders: Record<string, ProviderConfig> = {};
 
   constructor(options: RagOptions = {}) {
@@ -36,7 +43,8 @@ export class RagEngine {
       chunkOverlap: options.chunkOverlap ?? defaults.chunkOverlap!,
       topK: options.topK ?? defaults.topK!,
       dbPath: options.dbPath ?? defaults.dbPath!,
-      storeContentInObjectStore: options.storeContentInObjectStore ?? defaults.storeContentInObjectStore!,
+      storeContentInObjectStore:
+        options.storeContentInObjectStore ?? defaults.storeContentInObjectStore!,
       embeddingBatchSize: options.embeddingBatchSize ?? defaults.embeddingBatchSize!,
     } as typeof this.options;
     this.vectorIndex = this.buildVectorIndex();
@@ -77,7 +85,9 @@ export class RagEngine {
 
   async load(...sources: Array<string | { name: string; content: string }>): Promise<LoadResult[]> {
     if (!this.embeddingProvider) {
-      throw new Error("RAG: no embedding provider configured. Call sabi.rag.setProviders() or pass embeddingProvider in options.");
+      throw new Error(
+        "RAG: no embedding provider configured. Call sabi.rag.setProviders() or pass embeddingProvider in options."
+      );
     }
 
     const files: LoadedFile[] = [];
@@ -137,7 +147,11 @@ export class RagEngine {
 
       for (let i = 0; i < texts.length; i += batchSize) {
         const batch = texts.slice(i, i + batchSize);
-        const results = await embedBatch(batch, this.embeddingProvider, this.options.embeddingModel);
+        const results = await embedBatch(
+          batch,
+          this.embeddingProvider,
+          this.options.embeddingModel
+        );
         for (const r of results) {
           allEmbeddings.push(r.embedding);
         }
@@ -164,7 +178,9 @@ export class RagEngine {
     ...sources: Array<string | { name: string; content: string }>
   ): AsyncGenerator<LoadProgressEvent, void, undefined> {
     if (!this.embeddingProvider) {
-      throw new Error("RAG: no embedding provider configured. Call sabi.rag.setProviders() or pass embeddingProvider in options.");
+      throw new Error(
+        "RAG: no embedding provider configured. Call sabi.rag.setProviders() or pass embeddingProvider in options."
+      );
     }
 
     const files: LoadedFile[] = [];
@@ -226,8 +242,17 @@ export class RagEngine {
 
         for (let i = 0; i < texts.length; i += batchSize) {
           const batch = texts.slice(i, i + batchSize);
-          yield { type: "embed", filePath: file.path, batch: i / batchSize + 1, total: Math.ceil(texts.length / batchSize) };
-          const results = await embedBatch(batch, this.embeddingProvider, this.options.embeddingModel);
+          yield {
+            type: "embed",
+            filePath: file.path,
+            batch: i / batchSize + 1,
+            total: Math.ceil(texts.length / batchSize),
+          };
+          const results = await embedBatch(
+            batch,
+            this.embeddingProvider,
+            this.options.embeddingModel
+          );
           for (const r of results) {
             allEmbeddings.push(r.embedding);
           }
@@ -261,7 +286,11 @@ export class RagEngine {
     yield { type: "done" };
   }
 
-  async query(question: string, topK?: number, filter?: RagQueryFilter): Promise<RagSearchResult[]> {
+  async query(
+    question: string,
+    topK?: number,
+    filter?: RagQueryFilter
+  ): Promise<RagSearchResult[]> {
     if (!this.embeddingProvider) {
       throw new Error("RAG: no embedding provider configured.");
     }
@@ -279,17 +308,13 @@ export class RagEngine {
 
   clear(filePath?: string): void {
     if (filePath) {
-      const existing = this.store["memoryIndex"].filter(
-        (c) => c.filePath === resolve(filePath)
-      );
+      const existing = this.store["memoryIndex"].filter((c) => c.filePath === resolve(filePath));
       for (const chunk of existing) {
         this.vectorIndex?.remove(chunk.id);
         this.store.deleteFile(chunk.fileId);
       }
     } else {
-      const files = this.store["db"]
-        .query(`SELECT id FROM files`)
-        .all() as Array<{ id: string }>;
+      const files = this.store["db"].query(`SELECT id FROM files`).all() as Array<{ id: string }>;
       for (const f of files) {
         const chunkIds = this.store["db"]
           .query(`SELECT id FROM chunks WHERE file_id = ?`)

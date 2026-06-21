@@ -44,7 +44,14 @@ export class PgSessionStore implements StoreInterface {
       INSERT INTO chat_sessions (id, system, created_at, updated_at)
       VALUES (${id}, ${system ?? null}, ${now}, ${now})
     `;
-    return { id, system, createdAt: now.toISOString(), updatedAt: now.toISOString(), messageCount: 0, totalTokens: 0 };
+    return {
+      id,
+      system,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      messageCount: 0,
+      totalTokens: 0,
+    };
   }
 
   async getSession(sessionId: string): Promise<SessionInfo | null> {
@@ -104,7 +111,14 @@ export class PgSessionStore implements StoreInterface {
   }
 
   async getHistory(sessionId: string): Promise<StoredMessage[]> {
-    type Row = { id: string; session_id: string; role: string; content: string; tokens: number; created_at: string };
+    type Row = {
+      id: string;
+      session_id: string;
+      role: string;
+      content: string;
+      tokens: number;
+      created_at: string;
+    };
     const rows = await this.sql<Row[]>`
       SELECT id, session_id, role, content, tokens, created_at
       FROM chat_messages WHERE session_id = ${sessionId}
@@ -126,7 +140,14 @@ export class PgSessionStore implements StoreInterface {
   }
 
   async listSessions(limit = 50, offset = 0): Promise<SessionInfo[]> {
-    type Row = { id: string; system: string | null; created_at: string; updated_at: string; message_count: number; total_tokens: number };
+    type Row = {
+      id: string;
+      system: string | null;
+      created_at: string;
+      updated_at: string;
+      message_count: number;
+      total_tokens: number;
+    };
     const rows = await this.sql<Row[]>`
       SELECT id, system, created_at, updated_at, message_count, total_tokens
       FROM chat_sessions ORDER BY updated_at DESC LIMIT ${limit} OFFSET ${offset}

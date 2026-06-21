@@ -1,8 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## v0.7.0
 
 ### Added
+
+- **Guardrails — output token limits** — `output.tokenLimit` config with `block`, `warn`, or `truncate` actions. Uses provider `completionTokens` when available, estimates by length otherwise
+- **Guardrails — OpenAI Moderation API** — optional `moderationApiKey` integration for ML-powered content safety. Free tier, catches what regex misses. Gracefully falls back to regex on API failure
+- **Guardrails — `sabi.guardrail()` API** — register custom validators with `scope: "input" | "output" | "both"`. `validate` returns `boolean` or `{ passed, message }`. Throws `GuardrailError` on violation
+- **GuardrailMatch.action widened** — now `string` to support `"truncate"` alongside existing `block/redact/warn/passthrough`
 
 - **Auto-routing sugar** — `model` accepts `string | string[]`. When an array, elements after the first become fallbacks. `model: ["groq/cheap", "openai/gpt-4o"]` chains automatically
 - **ChatSDK** — `ChatSDK` class wraps `ConversationMemory` + `ChatAdapter` for prepare+call+record in one `chat()` / `stream()` call

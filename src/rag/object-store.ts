@@ -1,5 +1,13 @@
 import type { Database } from "bun:sqlite";
-import { mkdirSync, existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync, statSync } from "fs";
+import {
+  mkdirSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  readdirSync,
+  statSync,
+} from "fs";
 import { join, resolve, dirname, relative } from "path";
 
 export interface ObjectStore {
@@ -92,9 +100,9 @@ export class SqliteObjectStore implements ObjectStore {
   }
 
   async get(key: string): Promise<Uint8Array | null> {
-    const row = this.db
-      .query(`SELECT data FROM ${this.tableName} WHERE key = ?`)
-      .get(key) as { data: Uint8Array } | undefined;
+    const row = this.db.query(`SELECT data FROM ${this.tableName} WHERE key = ?`).get(key) as
+      | { data: Uint8Array }
+      | undefined;
     return row?.data ?? null;
   }
 
@@ -105,15 +113,11 @@ export class SqliteObjectStore implements ObjectStore {
   }
 
   async delete(key: string): Promise<void> {
-    this.db
-      .query(`DELETE FROM ${this.tableName} WHERE key = ?`)
-      .run(key);
+    this.db.query(`DELETE FROM ${this.tableName} WHERE key = ?`).run(key);
   }
 
   async has(key: string): Promise<boolean> {
-    const row = this.db
-      .query(`SELECT 1 FROM ${this.tableName} WHERE key = ?`)
-      .get(key);
+    const row = this.db.query(`SELECT 1 FROM ${this.tableName} WHERE key = ?`).get(key);
     return row !== undefined;
   }
 

@@ -57,7 +57,14 @@ export type LoadProgressEvent =
   | { type: "file_start"; filePath: string; current: number; total: number }
   | { type: "chunk"; filePath: string; chunks: number }
   | { type: "embed"; filePath: string; batch: number; total: number }
-  | { type: "file_done"; filePath: string; fileId: string; chunks: number; current: number; total: number }
+  | {
+      type: "file_done";
+      filePath: string;
+      fileId: string;
+      chunks: number;
+      current: number;
+      total: number;
+    }
   | { type: "file_skip"; filePath: string; current: number; total: number }
   | { type: "error"; filePath: string; error: string; current: number; total: number }
   | { type: "done" };

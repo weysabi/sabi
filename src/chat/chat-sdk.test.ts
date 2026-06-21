@@ -37,9 +37,21 @@ describe("ChatSDK", () => {
 
   afterEach(async () => {
     await sdk["memory"].close();
-    try { unlinkSync(TEST_DB); } catch { /* ignore */ }
-    try { unlinkSync(TEST_DB + "-wal"); } catch { /* ignore */ }
-    try { unlinkSync(TEST_DB + "-shm"); } catch { /* ignore */ }
+    try {
+      unlinkSync(TEST_DB);
+    } catch {
+      /* ignore */
+    }
+    try {
+      unlinkSync(TEST_DB + "-wal");
+    } catch {
+      /* ignore */
+    }
+    try {
+      unlinkSync(TEST_DB + "-shm");
+    } catch {
+      /* ignore */
+    }
   });
 
   it("returns response from adapter", async () => {
@@ -103,7 +115,11 @@ describe("ChatSDK", () => {
 
     expect(capturedSystem).toBe("You are helpful");
     await customSdk["memory"].close();
-    try { unlinkSync(TEST_DB + ".sys"); } catch { /* ignore */ }
+    try {
+      unlinkSync(TEST_DB + ".sys");
+    } catch {
+      /* ignore */
+    }
   });
 
   it("streams content when adapter supports streaming", async () => {
@@ -111,9 +127,13 @@ describe("ChatSDK", () => {
       async *stream(_req) {
         yield { content: "Hello", done: false };
         yield { content: " World", done: false };
-        yield { content: "", usage: { promptTokens: 5, completionTokens: 3, totalTokens: 8 }, done: true };
+        yield {
+          content: "",
+          usage: { promptTokens: 5, completionTokens: 3, totalTokens: 8 },
+          done: true,
+        };
       },
-      async complete(req) {
+      async complete(_req) {
         return { content: "fallback" };
       },
     };
@@ -138,12 +158,16 @@ describe("ChatSDK", () => {
     expect(history[1]!.content).toBe("Hello World");
 
     await streamSdk["memory"].close();
-    try { unlinkSync(TEST_DB + ".stream"); } catch { /* ignore */ }
+    try {
+      unlinkSync(TEST_DB + ".stream");
+    } catch {
+      /* ignore */
+    }
   });
 
   it("falls back to complete when adapter has no stream method", async () => {
     const noStreamAdapter: ChatAdapter = {
-      async complete(req) {
+      async complete(_req) {
         return { content: "no-stream-response" };
       },
     };
@@ -161,6 +185,10 @@ describe("ChatSDK", () => {
     expect(chunks).toEqual(["no-stream-response"]);
 
     await nsSdk["memory"].close();
-    try { unlinkSync(TEST_DB + ".ns"); } catch { /* ignore */ }
+    try {
+      unlinkSync(TEST_DB + ".ns");
+    } catch {
+      /* ignore */
+    }
   });
 });

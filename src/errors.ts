@@ -88,6 +88,8 @@ export class MaxToolCallsExceededError extends SabiError {
   }
 }
 
+export { GuardrailError } from "./guardrails/errors";
+
 export class SchemaValidationError extends SabiError {
   public readonly raw: string;
   public readonly issues: Array<{ path: string; message: string }>;

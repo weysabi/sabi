@@ -107,15 +107,17 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] Pluggable object store (`FsObjectStore`, `SqliteObjectStore`, BYO)
 - [x] `ConversationMemory` — provider-agnostic session persistence + auto‑truncation
 - [x] `StoreInterface` — pluggable backend: SQLite (default), Postgres (BYO `postgres` client), or custom
-- [ ] Automatic summarization for long conversations (Phase 7)
-- [ ] PDF / URL ingestion
+- [ ] Automatic summarization for long conversations (deferred — see PHASES.md)
+- [ ] PDF / URL ingestion (deferred — see PHASES.md)
 
-### Phase 7 — Guardrails (v1.1.0)
+### Phase 7 — Guardrails ✅ SHIPPED
 
-- [ ] PII redaction (emails, phones, SSNs, credit cards)
-- [ ] Topic blocking
-- [ ] Output token limits
-- [ ] Custom guardrails — `sabi.guardrail("name", { validate, onViolation })`
+- [x] PII redaction (emails, phones, SSNs, credit cards, API keys, IPs)
+- [x] Prompt injection detection (jailbreaks, system prompt extraction, delimiter confusion)
+- [x] Topic blocking (hate, harassment, violence, sexual, self-harm)
+- [x] OpenAI Moderation API integration (free, catches what regex misses)
+- [x] Output token limits (block, warn, truncate)
+- [x] Custom guardrails — `sabi.guardrail("name", { validate, onViolation })`
 
 ### Phase 8 — Eval Suites (v1.2.0)
 

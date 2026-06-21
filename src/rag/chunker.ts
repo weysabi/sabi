@@ -9,11 +9,7 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-export function splitText(
-  text: string,
-  chunkSize: number,
-  chunkOverlap: number
-): ChunkResult[] {
+export function splitText(text: string, chunkSize: number, chunkOverlap: number): ChunkResult[] {
   if (!text || chunkSize <= 0) return [];
 
   const splits = splitWithSeparators(text, SEPARATORS);

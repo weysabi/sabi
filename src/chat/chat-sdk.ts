@@ -1,6 +1,5 @@
 import { ConversationMemory } from "./memory";
 import type { ChatAdapter } from "./adapters/adapter";
-import type { MemoryOptions } from "./types";
 
 export interface ChatSDKOptions {
   adapter: ChatAdapter;
@@ -38,7 +37,8 @@ export class ChatSDK {
 
   constructor(opts: ChatSDKOptions) {
     this.adapter = opts.adapter;
-    this.memory = opts.memory ?? new ConversationMemory({ maxHistoryTokens: opts.maxHistoryTokens });
+    this.memory =
+      opts.memory ?? new ConversationMemory({ maxHistoryTokens: opts.maxHistoryTokens });
   }
 
   async chat(sessionId: string, opts: ChatSDKChatOptions): Promise<ChatSDKResponse> {
@@ -75,10 +75,7 @@ export class ChatSDK {
     };
   }
 
-  async *stream(
-    sessionId: string,
-    opts: ChatSDKChatOptions
-  ): AsyncIterable<ChatSDKChunk> {
+  async *stream(sessionId: string, opts: ChatSDKChatOptions): AsyncIterable<ChatSDKChunk> {
     const ctx = await this.memory.prepare(sessionId, {
       message: opts.message,
       system: opts.system,
@@ -86,7 +83,6 @@ export class ChatSDK {
     });
 
     if (!this.adapter.stream) {
-      const start = performance.now();
       const response = await this.adapter.complete({
         messages: ctx.messages,
         system: ctx.system,
@@ -94,8 +90,6 @@ export class ChatSDK {
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
       });
-      const latencyMs = performance.now() - start;
-
       await this.memory.record(sessionId, {
         userMessage: { content: opts.message },
         assistantMessage: { content: response.content },

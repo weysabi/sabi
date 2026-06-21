@@ -41,10 +41,7 @@ export function loadFile(filePath: string): LoadedFile {
   };
 }
 
-export function loadDirectory(
-  dirPath: string,
-  recursive: boolean = true
-): LoadedFile[] {
+export function loadDirectory(dirPath: string, recursive: boolean = true): LoadedFile[] {
   const resolved = resolve(dirPath);
 
   if (!existsSync(resolved)) {

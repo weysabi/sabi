@@ -1,5 +1,12 @@
 import { SqliteSessionStore } from "./store";
-import type { MemoryOptions, PrepareOptions, PrepareResult, RecordOptions, SessionInfo, StoreInterface } from "./types";
+import type {
+  MemoryOptions,
+  PrepareOptions,
+  PrepareResult,
+  RecordOptions,
+  SessionInfo,
+  StoreInterface,
+} from "./types";
 import { DEFAULT_MEMORY_OPTIONS, estimateTokens } from "./types";
 
 export class ConversationMemory {
@@ -7,8 +14,11 @@ export class ConversationMemory {
   private options: { maxHistoryTokens: number };
 
   constructor(options: MemoryOptions = {}) {
-    this.options = { maxHistoryTokens: options.maxHistoryTokens ?? DEFAULT_MEMORY_OPTIONS.maxHistoryTokens };
-    this.store = options.store ?? new SqliteSessionStore(options.dbPath ?? DEFAULT_MEMORY_OPTIONS.dbPath);
+    this.options = {
+      maxHistoryTokens: options.maxHistoryTokens ?? DEFAULT_MEMORY_OPTIONS.maxHistoryTokens,
+    };
+    this.store =
+      options.store ?? new SqliteSessionStore(options.dbPath ?? DEFAULT_MEMORY_OPTIONS.dbPath);
   }
 
   async prepare(sessionId: string, opts: PrepareOptions): Promise<PrepareResult> {
@@ -35,7 +45,12 @@ export class ConversationMemory {
     const assistantTokens = estimateTokens(opts.assistantMessage.content);
 
     await this.store.addMessage(sessionId, "user", opts.userMessage.content, userTokens);
-    await this.store.addMessage(sessionId, "assistant", opts.assistantMessage.content, assistantTokens);
+    await this.store.addMessage(
+      sessionId,
+      "assistant",
+      opts.assistantMessage.content,
+      assistantTokens
+    );
   }
 
   private buildHistory(

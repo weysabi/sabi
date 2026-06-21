@@ -73,7 +73,11 @@ export class HnswVectorIndex {
 
     for (let l = Math.min(level, topLevel); l >= 0; l--) {
       const candidates = this.searchLayer(node.vector, ep, this.efConstruction, l);
-      const neighbors = this.selectNeighbors(node.vector, candidates, l === 0 ? this.Mmax0 : this.M);
+      const neighbors = this.selectNeighbors(
+        node.vector,
+        candidates,
+        l === 0 ? this.Mmax0 : this.M
+      );
 
       for (const nId of neighbors) {
         node.neighbors[l]!.push(nId);
@@ -133,7 +137,9 @@ export class HnswVectorIndex {
 
     if (this.entryPoint === id) {
       this.entryPoint = this.nodes.size > 0 ? this.nodes.keys().next().value! : null;
-      this.maxLevel = this.entryPoint ? Math.max(...Array.from(this.nodes.values()).map((n) => n.level)) : -1;
+      this.maxLevel = this.entryPoint
+        ? Math.max(...Array.from(this.nodes.values()).map((n) => n.level))
+        : -1;
     }
   }
 
@@ -306,9 +312,10 @@ export class HnswVectorIndex {
 
     let idx = 0;
     for (const g of saved.graph) {
-      const vec = vectorsLoaded && vecData
-        ? vecData.subarray(idx * this.numDimensions, (idx + 1) * this.numDimensions)
-        : new Float32Array(this.numDimensions);
+      const vec =
+        vectorsLoaded && vecData
+          ? vecData.subarray(idx * this.numDimensions, (idx + 1) * this.numDimensions)
+          : new Float32Array(this.numDimensions);
 
       this.nodes.set(g.id, {
         id: g.id,
@@ -432,7 +439,8 @@ class BinaryHeap<T> {
       const left = 2 * idx + 1;
       const right = 2 * idx + 2;
       if (left < length && this.compare(this.items[left]!, this.items[smallest]!)) smallest = left;
-      if (right < length && this.compare(this.items[right]!, this.items[smallest]!)) smallest = right;
+      if (right < length && this.compare(this.items[right]!, this.items[smallest]!))
+        smallest = right;
       if (smallest !== idx) {
         [this.items[idx], this.items[smallest]] = [this.items[smallest]!, this.items[idx]!];
         idx = smallest;

@@ -13,9 +13,21 @@ describe("ConversationMemory", () => {
 
   afterEach(async () => {
     await memory.close();
-    try { unlinkSync(TEST_DB); } catch { /* ignore */ }
-    try { unlinkSync(TEST_DB + "-wal"); } catch { /* ignore */ }
-    try { unlinkSync(TEST_DB + "-shm"); } catch { /* ignore */ }
+    try {
+      unlinkSync(TEST_DB);
+    } catch {
+      /* ignore */
+    }
+    try {
+      unlinkSync(TEST_DB + "-wal");
+    } catch {
+      /* ignore */
+    }
+    try {
+      unlinkSync(TEST_DB + "-shm");
+    } catch {
+      /* ignore */
+    }
   });
 
   it("creates a new session on first prepare", async () => {
@@ -151,6 +163,10 @@ describe("ConversationMemory", () => {
     const session = await custom.getSession("custom-session");
     expect(session?.id).toBe("custom-session");
     await custom.close();
-    try { unlinkSync(".sabi/custom-store.db"); } catch { /* ignore */ }
+    try {
+      unlinkSync(".sabi/custom-store.db");
+    } catch {
+      /* ignore */
+    }
   });
 });

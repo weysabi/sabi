@@ -1,6 +1,6 @@
 {
   "name": "@weysabi/sabi",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "AI orchestration for fullstack devs — provider failover, structured output, RAG, and streaming. One library, zero markup.",
   "type": "module",
   "main": "./src/index.ts",
@@ -73,6 +73,11 @@
       "types": "./src/chat/index.ts",
       "import": "./src/chat/index.ts",
       "default": "./src/chat/index.ts"
+    },
+    "./guardrails": {
+      "types": "./src/guardrails/index.ts",
+      "import": "./src/guardrails/index.ts",
+      "default": "./src/guardrails/index.ts"
     }
   },
   "files": [

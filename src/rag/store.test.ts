@@ -9,13 +9,21 @@ describe("RagStore", () => {
   let store: RagStore;
 
   beforeEach(() => {
-    try { unlinkSync(TEST_DB); } catch { /* db may not exist */ }
+    try {
+      unlinkSync(TEST_DB);
+    } catch {
+      /* db may not exist */
+    }
     store = new RagStore({ dbPath: TEST_DB });
   });
 
   afterEach(() => {
     store.close();
-    try { unlinkSync(TEST_DB); } catch { /* db may not exist */ }
+    try {
+      unlinkSync(TEST_DB);
+    } catch {
+      /* db may not exist */
+    }
   });
 
   it("starts empty", () => {

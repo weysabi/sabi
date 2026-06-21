@@ -27,6 +27,8 @@ import { createModuleLogger } from "./logger";
 import { estimateCost } from "./pricing";
 import type { Catalog } from "@joinremba/catalog";
 import type { ToolDefInfo } from "./providers/handler";
+import type { GuardrailOptions, GuardrailMatch } from "./guardrails/types";
+import { GuardrailError } from "./errors";
 import { RagEngine } from "./rag/engine";
 import {
   SabiError,
@@ -67,11 +69,19 @@ export type {
 } from "./types";
 
 export type { SabiPlugin, CacheAdapter } from "./types";
+export type { GuardrailOptions } from "./guardrails/types";
 export { cacheKey } from "./types";
 export { InMemoryCache, RedisCache } from "./cache";
 export type { RedisLikeClient } from "./cache";
 export { RagEngine } from "./rag/engine";
-export { ConversationMemory, SqliteSessionStore, PgSessionStore, ChatSDK, OpenAIAdapter, AnthropicAdapter } from "./chat";
+export {
+  ConversationMemory,
+  SqliteSessionStore,
+  PgSessionStore,
+  ChatSDK,
+  OpenAIAdapter,
+  AnthropicAdapter,
+} from "./chat";
 export type { StoreInterface, ChatAdapter, AdapterRequest, AdapterResponse } from "./chat";
 
 export {
@@ -99,6 +109,7 @@ export interface Sabi {
   complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>>;
   stream(request: StreamRequest): AsyncIterable<StreamChunk>;
   use(plugin: SabiPlugin): void;
+  guardrail(name: string, options: GuardrailOptions): void;
   rag: RagEngine;
 }
 
@@ -130,23 +141,66 @@ class SabiImpl implements Sabi {
     const embeddingModel = this.rag["options"].embeddingModel;
     const [providerName] = embeddingModel.split("/");
     if (providerName && providers[providerName]) {
-      this.rag.setProviders(
-        { ...providers[providerName]!, provider: providerName },
-        providers
-      );
+      this.rag.setProviders({ ...providers[providerName]!, provider: providerName }, providers);
     } else {
       const first = Object.entries(providers)[0];
       if (first) {
-        this.rag.setProviders(
-          { ...first[1], provider: first[0] },
-          providers
-        );
+        this.rag.setProviders({ ...first[1], provider: first[0] }, providers);
       }
     }
   }
 
   use(plugin: SabiPlugin): void {
     this.plugins.push(plugin);
+  }
+
+  guardrail(name: string, options: GuardrailOptions): void {
+    const plugin: SabiPlugin = {
+      name: `guardrail.${name}`,
+
+      onCompleteRequest(request: CompleteRequest): CompleteRequest {
+        if (options.scope === "output") return request;
+        const text = (request.messages ?? []).map((m) => m.content ?? "").join("\n");
+        const result = options.validate(text);
+        const passed = typeof result === "boolean" ? result : result.passed;
+        if (passed) return request;
+
+        const message =
+          typeof result === "object" && result.message
+            ? result.message
+            : `Guardrail "${name}" blocked input`;
+        const match: GuardrailMatch = {
+          category: "custom",
+          subcategory: name,
+          action: "block",
+          message,
+        };
+        options.onViolation?.(match);
+        throw new GuardrailError(match);
+      },
+
+      onCompleteResponse(response: CompleteResponse): CompleteResponse {
+        if (options.scope === "input") return response;
+        const result = options.validate(response.content);
+        const passed = typeof result === "boolean" ? result : result.passed;
+        if (passed) return response;
+
+        const message =
+          typeof result === "object" && result.message
+            ? result.message
+            : `Guardrail "${name}" blocked output`;
+        const match: GuardrailMatch = {
+          category: "custom",
+          subcategory: name,
+          action: "block",
+          message,
+        };
+        options.onViolation?.(match);
+        throw new GuardrailError(match);
+      },
+    };
+
+    this.use(plugin);
   }
 
   prompt(name: string, template: string): void;
@@ -163,10 +217,10 @@ class SabiImpl implements Sabi {
   }
 
   async complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>> {
-    let currentRequest = this.normalizeModels(request);
+    let currentRequest: CompleteRequest = this.normalizeModels(request) as CompleteRequest;
     for (const plugin of this.plugins) {
       if (plugin.onCompleteRequest) {
-        currentRequest = await plugin.onCompleteRequest(currentRequest) as CompleteRequest;
+        currentRequest = (await plugin.onCompleteRequest(currentRequest)) as CompleteRequest;
       }
     }
 
@@ -208,7 +262,10 @@ class SabiImpl implements Sabi {
     const messages: HandlerMessage[] = this.resolveMessages(parsed);
 
     if (parsed.rag) {
-      const queryText = messages.map((m) => ("content" in m ? m.content : "")).filter(Boolean).join("\n");
+      const queryText = messages
+        .map((m) => ("content" in m ? m.content : ""))
+        .filter(Boolean)
+        .join("\n");
       if (queryText) {
         const results = await this.rag.query(queryText);
         if (results.length > 0) {
@@ -230,7 +287,7 @@ class SabiImpl implements Sabi {
       }
     }
 
-    const models = [parsed.model, ...(parsed.fallbacks ?? [])];
+    const models: string[] = [parsed.model as string, ...(parsed.fallbacks ?? [])];
     const errors: { model: string; error: string }[] = [];
     const schema = parsed.schema as z.ZodType<T> | undefined;
     const maxRetries = parsed.schemaMaxRetries ?? 1;
@@ -439,14 +496,14 @@ class SabiImpl implements Sabi {
       errors,
     });
 
-    throw new AllModelsFailedError(parsed.model, parsed.fallbacks ?? [], errors);
+    throw new AllModelsFailedError(parsed.model as string, parsed.fallbacks ?? [], errors);
   }
 
   async *stream(request: StreamRequest): AsyncIterable<StreamChunk> {
-    let currentRequest = this.normalizeModels(request);
+    let currentRequest: StreamRequest = this.normalizeModels(request) as StreamRequest;
     for (const plugin of this.plugins) {
       if (plugin.onStreamRequest) {
-        currentRequest = await plugin.onStreamRequest(currentRequest) as StreamRequest;
+        currentRequest = (await plugin.onStreamRequest(currentRequest)) as StreamRequest;
       }
     }
 
@@ -469,7 +526,7 @@ class SabiImpl implements Sabi {
       );
     }
     const messages = this.resolveMessages(parsed);
-    const models = [parsed.model, ...(parsed.fallbacks ?? [])];
+    const models: string[] = [parsed.model as string, ...(parsed.fallbacks ?? [])];
     const errors: { model: string; error: string }[] = [];
     const hooks = this.opts.telemetry;
 
@@ -535,19 +592,21 @@ class SabiImpl implements Sabi {
       errors,
     });
 
-    throw new AllModelsFailedError(parsed.model, parsed.fallbacks ?? [], errors);
+    throw new AllModelsFailedError(parsed.model as string, parsed.fallbacks ?? [], errors);
   }
 
-  private normalizeModels(request: CompleteRequest | StreamRequest): CompleteRequest | StreamRequest {
+  private normalizeModels<Req extends CompleteRequest | StreamRequest>(
+    request: Req
+  ): Req & { model: string } {
     if (Array.isArray(request.model)) {
       const [primary, ...rest] = request.model;
       return {
         ...request,
         model: primary!,
         fallbacks: [...rest, ...(request.fallbacks ?? [])],
-      };
+      } as Req & { model: string };
     }
-    return request;
+    return request as Req & { model: string };
   }
 
   private resolveMessages(req: CompleteRequest | StreamRequest): HandlerMessage[] {
