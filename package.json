@@ -3,6 +3,7 @@
   "version": "0.7.0",
   "private": true,
   "type": "module",
+  "workspaces": ["packages/*"],
   "scripts": {
     "format": "bunx prettier --write .",
     "format:check": "bunx prettier --check .",
