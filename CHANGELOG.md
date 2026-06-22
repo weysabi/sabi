@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.7.1
+
+### Added
+
+- **Prompt management API** — `PromptDefinition` type + `Prompt` class with typed messages, schema, model, temperature. `sabi.prompts.register()` / `registerMany()` for structured prompt registration. `sabi.prompts.run(id, input, overrides?)` renders and executes through the full provider pipeline. `@weysabi/sabi/prompts` sub-path export
+- **Sabi Server** — `sabi server --port 3000` CLI command starts an OpenAI-compatible HTTP server. `POST /v1/chat/completions`, `GET /v1/models`, `GET /health`. Supports streaming SSE and non-streaming JSON. `createSabiServer(sabi)` programmatic API. `@weysabi/sabi/server` sub-path export
+- **CLI init improvements** — model suggestions per provider, example prompt file scaffolding (classify, translate), automatic `.sabi/` entry in `.gitignore`
+- **`SabiOptions.promptDefinitions`** — register initial prompts at construction time
+
+### Changed
+
+- `src/prompts.ts` replaced by `src/prompts/` directory with `Prompt`, `PromptRegistry`, `SabiPrompts`
+- **Breaking**: removed `sabi.prompt()` / `sabi.render()` legacy API. Use `sabi.prompts.register()` / `sabi.prompts.render()` instead
+- **Breaking**: removed `SabiOptions.prompts` (initial string templates). Use `SabiOptions.promptDefinitions` instead
+
 ## v0.7.0
 
 ### Added

@@ -68,7 +68,6 @@ const CircuitBreakerOptionsSchema = z.object({
 });
 
 export const SabiOptionsSchema = z.object({
-  prompts: z.record(z.string(), z.string()).optional(),
   promptDefinitions: z.array(z.any()).optional(),
   timeout: z.number().int().optional(),
   retry: RetryOptionsSchema.optional(),

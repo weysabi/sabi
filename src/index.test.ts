@@ -54,43 +54,7 @@ describe("Sabi", () => {
     });
   });
 
-  describe("prompt templates", () => {
-    it("registers and retrieves a template", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } });
-      sabi.prompt("translate", "Translate {text} to {language}");
-      expect(sabi.prompt("translate")).toBe("Translate {text} to {language}");
-    });
-
-    it("returns undefined for unknown template", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } });
-      expect(sabi.prompt("nonexistent")).toBeUndefined();
-    });
-
-    it("renders a template with inputs", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } });
-      sabi.prompt("greet", "Hello {name}, your balance is {amount} NGN");
-      const result = sabi.render("greet", { name: "Benson", amount: "5000" });
-      expect(result).toBe("Hello Benson, your balance is 5000 NGN");
-    });
-
-    it("throws PromptNotFoundError for unknown template render", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } });
-      expect(() => sabi.render("missing", { a: "1" })).toThrow(PromptNotFoundError);
-    });
-
-    it("throws MissingPromptInputError for missing input", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } });
-      sabi.prompt("test", "{a} {b}");
-      expect(() => sabi.render("test", { a: "1" })).toThrow(MissingPromptInputError);
-    });
-
-    it("supports initial prompts in options", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } }, { prompts: { greet: "Hi {name}" } });
-      expect(sabi.prompt("greet")).toBe("Hi {name}");
-    });
-  });
-
-  describe("prompt management (sabi.prompts)", () => {
+  describe("prompt management", () => {
     it("registers and retrieves a structured prompt", () => {
       const sabi = createSabi({ groq: { apiKey: "key" } });
       sabi.prompts.register({
@@ -116,11 +80,11 @@ describe("Sabi", () => {
       const sabi = createSabi({ groq: { apiKey: "key" } });
       sabi.prompts.register({
         id: "a",
-        messages: [{ role: "user", content: "Hello" }],
+        messages: [{ role: "user", content: "A" }],
       });
       sabi.prompts.register({
         id: "b",
-        messages: [{ role: "user", content: "World" }],
+        messages: [{ role: "user", content: "B" }],
       });
       const list = sabi.prompts.list();
       expect(list).toHaveLength(2);
@@ -147,11 +111,25 @@ describe("Sabi", () => {
           { role: "user", content: "Say {word}" },
         ],
       });
-      const messages = sabi.prompts.promptRender("greeter", { user: "Ben", word: "hello" });
+      const messages = sabi.prompts.render("greeter", { user: "Ben", word: "hello" });
       expect(messages).toEqual([
         { role: "system", content: "You help Ben" },
         { role: "user", content: "Say hello" },
       ]);
+    });
+
+    it("throws PromptNotFoundError for unknown prompt render", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      expect(() => sabi.prompts.render("missing", { a: "1" })).toThrow(PromptNotFoundError);
+    });
+
+    it("throws MissingPromptInputError for missing input", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "test",
+        messages: [{ role: "user", content: "{a} {b}" }],
+      });
+      expect(() => sabi.prompts.render("test", { a: "1" })).toThrow(MissingPromptInputError);
     });
 
     it("runs a prompt through the pipeline", async () => {
@@ -214,7 +192,7 @@ describe("Sabi", () => {
 
     it("run throws for unknown prompt", async () => {
       const sabi = createSabi({ groq: { apiKey: "key" } });
-      await expect(sabi.prompts.run("nope", {})).rejects.toThrow(/not found/i);
+      await expect(sabi.prompts.run("nonexistent", {})).rejects.toThrow(PromptNotFoundError);
     });
 
     it("supports initial prompt definitions in options", () => {
@@ -238,23 +216,8 @@ describe("Sabi", () => {
     it("clear removes all prompts", () => {
       const sabi = createSabi({ groq: { apiKey: "key" } });
       sabi.prompts.register({ id: "a", messages: [{ role: "user", content: "A" }] });
-      sabi.prompts.set("b", "template B");
       sabi.prompts.clear();
       expect(sabi.prompts.get("a")).toBeUndefined();
-      expect(sabi.prompts.getTemplate("b")).toBeUndefined();
-    });
-
-    it("legacy prompt API still works alongside structured prompts", () => {
-      const sabi = createSabi({ groq: { apiKey: "key" } });
-      sabi.prompt("legacy", "Hello {name}");
-      sabi.prompts.register({
-        id: "structured",
-        messages: [{ role: "user", content: "Hi {name}" }],
-      });
-
-      expect(sabi.prompt("legacy")).toBe("Hello {name}");
-      expect(sabi.render("legacy", { name: "Ben" })).toBe("Hello Ben");
-      expect(sabi.prompts.get("structured")).toBeDefined();
     });
   });
 
@@ -292,7 +255,10 @@ describe("Sabi", () => {
       });
 
       const sabi = createSabi({ groq: { apiKey: "key" } });
-      sabi.prompt("translate", "Say {word} in French");
+      sabi.prompts.register({
+        id: "translate",
+        messages: [{ role: "user", content: "Say {word} in French" }],
+      });
       const result = await sabi.complete({
         model: "groq/llama-3.1-8b-instant",
         prompt: "translate",

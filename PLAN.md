@@ -130,16 +130,25 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] Backward compatible — `sabi.prompt()` / `sabi.render()` continue working
 - [x] Initial prompt definitions via `SabiOptions.promptDefinitions`
 - [ ] File-based `.prompt.yaml` loading (deferred — see PHASES.md)
-- [ ] `sabi scan prompts` — lint prompts for safety/quality issues (deferred)
 
-### Phase 9 — Eval Suites (v1.2.0)
+### Phase 9 — Sabi Server ✅ SHIPPED
+
+- [x] `POST /v1/chat/completions` — OpenAI-compatible, stream + non-stream
+- [x] `GET /v1/models` — list configured models
+- [x] `GET /health` — health check
+- [x] `sabi server --port 3000` CLI command
+- [x] `createSabiServer(sabi)` programmatic API
+- [x] Env-var config via `SABI_PORT`, `SABI_*_API_KEY`
+- [x] `@weysabi/sabi/server` sub-path export
+
+### Phase 10 — Eval Suites (v1.2.0)
 
 - [ ] `sabi.eval.createSuite("name")` — create test suites
 - [ ] `suite.addCase({ prompt, inputs, expected })` — add test cases
 - [ ] `suite.run({ model })` — run all cases, get pass/fail
 - [ ] CI gate: `sabi eval check --min-pass=90`
 
-### Phase 10 — Cloud Dashboard (v2.0.0)
+### Phase 11 — Cloud Dashboard (v2.0.0)
 
 - [ ] Prompt management (CRUD, versioning, diff, rollback)
 - [ ] Usage analytics (requests, tokens, cost by model/user/time)
@@ -149,14 +158,14 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [ ] Team features (shared prompts, API keys, roles, audit log)
 - [ ] Auth (JWT-based, admin users, sessions)
 
-### Phase 11 — Hosted Inference (v3.0.0)
+### Phase 12 — Hosted Inference (v3.0.0)
 
 - [ ] GPU infra for open-source models
 - [ ] `sabi/llama-4-scout`, `sabi/deepseek-v3`, `sabi/mistral-large`
 - [ ] Auto-scaling, per-token billing
 - [ ] Cheaper than Groq/Together (no middleman)
 
-### Phase 12 — Smart Routing (v3.1.0)
+### Phase 13 — Smart Routing (v3.1.0)
 
 - [ ] `model: "auto"` — Sabi selects best model based on task complexity
 - [ ] Cost optimization: simple → cheap hosted, complex → GPT-4/Claude
@@ -185,8 +194,8 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 | Eval suites       | Third-party   | No               | Native + cloud     |
 | Prompt versioning | No            | No               | Cloud dashboard    |
 | Cost tracking     | No            | No               | Auto-logged        |
-| Hosted models     | No            | No               | Phase 11           |
-| Cloud dashboard   | No            | No               | Phase 10           |
+| Hosted models     | No            | No               | Phase 12           |
+| Cloud dashboard   | No            | No               | Phase 11           |
 | Setup time        | Days          | Hours            | Minutes            |
 
 ## Package Structure

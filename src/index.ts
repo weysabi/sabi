@@ -106,9 +106,6 @@ export type { SabiPrompts, PromptDefinition } from "./prompts";
 export { Prompt } from "./prompts";
 
 export interface Sabi {
-  prompt(name: string, template: string): void;
-  prompt(name: string): string | undefined;
-  render(name: string, inputs: Record<string, string>): string;
   complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>>;
   stream(request: StreamRequest): AsyncIterable<StreamChunk>;
   use(plugin: SabiPlugin): void;
@@ -138,7 +135,6 @@ class SabiImpl implements Sabi {
     }
 
     this.prompts = createSabiPrompts({
-      initialTemplates: options.prompts,
       initialDefinitions: options.promptDefinitions as PromptDefinition[] | undefined,
       complete: <T>(req: CompleteRequest) => this.complete<T>(req),
     });
@@ -210,19 +206,6 @@ class SabiImpl implements Sabi {
     };
 
     this.use(plugin);
-  }
-
-  prompt(name: string, template: string): void;
-  prompt(name: string): string | undefined;
-  prompt(name: string, template?: string): string | undefined | void {
-    if (template === undefined) {
-      return this.prompts.getTemplate(name);
-    }
-    this.prompts.set(name, template);
-  }
-
-  render(name: string, inputs: Record<string, string>): string {
-    return this.prompts.render(name, inputs);
   }
 
   async complete<T = unknown>(request: CompleteRequest): Promise<CompleteResponse<T>> {
@@ -620,8 +603,7 @@ class SabiImpl implements Sabi {
 
   private resolveMessages(req: CompleteRequest | StreamRequest): HandlerMessage[] {
     if (req.prompt !== undefined) {
-      const content = this.prompts.render(req.prompt, req.inputs ?? {});
-      return [{ role: "user", content }];
+      return this.prompts.render(req.prompt, req.inputs ?? {}) as HandlerMessage[];
     }
     if (req.messages !== undefined && req.messages.length > 0) {
       return req.messages as HandlerMessage[];

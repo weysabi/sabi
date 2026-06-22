@@ -148,7 +148,10 @@ describe("stream", () => {
     });
 
     const sabi = createSabi({ groq: { apiKey: "key" } });
-    sabi.prompt("translate", "Say {word} in French");
+    sabi.prompts.register({
+      id: "translate",
+      messages: [{ role: "user", content: "Say {word} in French" }],
+    });
 
     const chunks: string[] = [];
     for await (const chunk of sabi.stream({
