@@ -95,7 +95,7 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] CLI: `bunx sabi <command>` — `init`, `config validate`, `complete`, `stream`, `prompt {list,add,rm}`, `benchmark`, `doctor`
 - [x] Middleware/plugin system — `sabi.use(plugin)` with lifecycle hooks
 
-### Phase 6 — RAG & Memory (v1.0.0)
+### Phase 6 — RAG & Memory (v0.7.0)
 
 - [x] `RagEngine` — ingest files, directories, raw text; query with vector search
 - [x] `RagManager` — multi-project lifecycle, cross-project `queryAll()`
@@ -119,14 +119,27 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] Output token limits (block, warn, truncate)
 - [x] Custom guardrails — `sabi.guardrail("name", { validate, onViolation })`
 
-### Phase 8 — Eval Suites (v1.2.0)
+### Phase 8 — Prompt Management ✅ SHIPPED
+
+- [x] `Prompt` class — typed definition with messages, schema, model, temperature, maxTokens
+- [x] `sabi.prompts.register(def)` / `sabi.prompts.registerMany(defs)` — structured prompt registration
+- [x] `sabi.prompts.run(id, input, overrides?)` — render + execute through full provider pipeline
+- [x] `Prompt.render(input)` — renders `{variable}` in message content
+- [x] `PromptDefinitionSchema` — Zod validation for prompt definitions
+- [x] `@weysabi/sabi/prompts` sub-path export
+- [x] Backward compatible — `sabi.prompt()` / `sabi.render()` continue working
+- [x] Initial prompt definitions via `SabiOptions.promptDefinitions`
+- [ ] File-based `.prompt.yaml` loading (deferred — see PHASES.md)
+- [ ] `sabi scan prompts` — lint prompts for safety/quality issues (deferred)
+
+### Phase 9 — Eval Suites (v1.2.0)
 
 - [ ] `sabi.eval.createSuite("name")` — create test suites
 - [ ] `suite.addCase({ prompt, inputs, expected })` — add test cases
 - [ ] `suite.run({ model })` — run all cases, get pass/fail
 - [ ] CI gate: `sabi eval check --min-pass=90`
 
-### Phase 9 — Cloud Dashboard (v2.0.0)
+### Phase 10 — Cloud Dashboard (v2.0.0)
 
 - [ ] Prompt management (CRUD, versioning, diff, rollback)
 - [ ] Usage analytics (requests, tokens, cost by model/user/time)
@@ -136,14 +149,14 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [ ] Team features (shared prompts, API keys, roles, audit log)
 - [ ] Auth (JWT-based, admin users, sessions)
 
-### Phase 10 — Hosted Inference (v3.0.0)
+### Phase 11 — Hosted Inference (v3.0.0)
 
 - [ ] GPU infra for open-source models
 - [ ] `sabi/llama-4-scout`, `sabi/deepseek-v3`, `sabi/mistral-large`
 - [ ] Auto-scaling, per-token billing
 - [ ] Cheaper than Groq/Together (no middleman)
 
-### Phase 11 — Smart Routing (v3.1.0)
+### Phase 12 — Smart Routing (v3.1.0)
 
 - [ ] `model: "auto"` — Sabi selects best model based on task complexity
 - [ ] Cost optimization: simple → cheap hosted, complex → GPT-4/Claude
@@ -165,14 +178,15 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 | Structured output | Parser chains | `generateObject` | Zod-native         |
 | Streaming         | Manual        | `streamText`     | Auto + adapters    |
 | Tool calling      | Complex       | Good             | TS functions       |
-| RAG               | Multiple deps | No               | Built-in (Phase 6) |
+| RAG               | Multiple deps | No               | Built-in           |
 | Memory            | BufferMemory  | `useChat`        | Persisted sessions |
-| Guardrails        | No            | No               | Built-in (Phase 7) |
+| Guardrails        | No            | No               | Built-in           |
+| Prompt management | No            | No               | Typed + runnable   |
 | Eval suites       | Third-party   | No               | Native + cloud     |
 | Prompt versioning | No            | No               | Cloud dashboard    |
 | Cost tracking     | No            | No               | Auto-logged        |
-| Hosted models     | No            | No               | Phase 10           |
-| Cloud dashboard   | No            | No               | Phase 9            |
+| Hosted models     | No            | No               | Phase 11           |
+| Cloud dashboard   | No            | No               | Phase 10           |
 | Setup time        | Days          | Hours            | Minutes            |
 
 ## Package Structure
@@ -191,7 +205,10 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 │   │   ├── openai.ts            # OpenAI-compatible (Groq, Nvidia, DeepSeek, etc.)
 │   │   ├── anthropic.ts         # Anthropic Messages API handler
 │   │   └── google.ts            # Google Gemini handler
-│   ├── prompts.ts               # PromptRegistry (templates with {variable})
+│   ├── prompts/
+│   │   ├── index.ts             # SabiPrompts + createSabiPrompts()
+│   │   ├── prompt.ts            # PromptDefinition, Prompt class + render()
+│   │   └── registry.ts          # PromptRegistry (structured prompt storage)
 │   ├── sse.ts                   # Generic toResponse() for Web Fetch frameworks
 │   ├── stream.ts                # Client-side readStream helper
 │   ├── hono.ts                  # Re-exports SSE

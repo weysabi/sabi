@@ -7,6 +7,7 @@ import { streamCommand } from "./commands/stream";
 import { promptListCommand, promptAddCommand, promptRemoveCommand } from "./commands/prompt";
 import { benchmarkCommand } from "./commands/benchmark";
 import { doctorCommand } from "./commands/doctor";
+import { serverCommand } from "./commands/server";
 
 const version = "0.5.0";
 
@@ -79,5 +80,12 @@ program
   .command("doctor")
   .description("System diagnostics — runtime, version, API keys, config")
   .action(doctorCommand);
+
+program
+  .command("server")
+  .description("Start an OpenAI-compatible HTTP server")
+  .option("-p, --port <port>", "Port to listen on")
+  .option("--host <host>", "Host to bind to")
+  .action(serverCommand);
 
 program.parse(process.argv);

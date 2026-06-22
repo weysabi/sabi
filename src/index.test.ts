@@ -90,6 +90,174 @@ describe("Sabi", () => {
     });
   });
 
+  describe("prompt management (sabi.prompts)", () => {
+    it("registers and retrieves a structured prompt", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "classifier",
+        messages: [
+          { role: "system", content: "You are a classifier" },
+          { role: "user", content: "Classify: {text}" },
+        ],
+        model: "groq/llama-4-scout",
+      });
+      const prompt = sabi.prompts.get("classifier");
+      expect(prompt).toBeDefined();
+      expect(prompt!.id).toBe("classifier");
+      expect(prompt!.model).toBe("groq/llama-4-scout");
+    });
+
+    it("returns undefined for unknown prompt", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      expect(sabi.prompts.get("nonexistent")).toBeUndefined();
+    });
+
+    it("lists registered prompts", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "a",
+        messages: [{ role: "user", content: "Hello" }],
+      });
+      sabi.prompts.register({
+        id: "b",
+        messages: [{ role: "user", content: "World" }],
+      });
+      const list = sabi.prompts.list();
+      expect(list).toHaveLength(2);
+      expect(list.map((p) => p.id)).toEqual(["a", "b"]);
+    });
+
+    it("removes a prompt", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "test",
+        messages: [{ role: "user", content: "test" }],
+      });
+      expect(sabi.prompts.has("test")).toBeTrue();
+      sabi.prompts.remove("test");
+      expect(sabi.prompts.has("test")).toBeFalse();
+    });
+
+    it("renders a structured prompt with variables", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "greeter",
+        messages: [
+          { role: "system", content: "You help {user}" },
+          { role: "user", content: "Say {word}" },
+        ],
+      });
+      const messages = sabi.prompts.promptRender("greeter", { user: "Ben", word: "hello" });
+      expect(messages).toEqual([
+        { role: "system", content: "You help Ben" },
+        { role: "user", content: "Say hello" },
+      ]);
+    });
+
+    it("runs a prompt through the pipeline", async () => {
+      setFetch(async () =>
+        okResponse({
+          choices: [{ message: { content: "It's a refund request" } }],
+          usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        })
+      );
+
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "classifier",
+        messages: [
+          { role: "system", content: "You classify tickets" },
+          { role: "user", content: "Classify: {text}" },
+        ],
+        model: "groq/llama-4-scout",
+      });
+
+      const result = await sabi.prompts.run("classifier", { text: "I want a refund" });
+      expect(result.content).toBe("It's a refund request");
+      expect(result.model).toBe("groq/llama-4-scout");
+    });
+
+    it("run overrides model from definition", async () => {
+      setFetch(async () =>
+        okResponse({
+          choices: [{ message: { content: "Hello" } }],
+        })
+      );
+
+      const sabi = createSabi({
+        groq: { apiKey: "key" },
+        nvidia: { apiKey: "key2" },
+      });
+      sabi.prompts.register({
+        id: "test",
+        messages: [{ role: "user", content: "Say {word}" }],
+        model: "groq/llama-4-scout",
+      });
+
+      const result = await sabi.prompts.run(
+        "test",
+        { word: "hi" },
+        { model: "nvidia/llama-3.1-8b-instruct" }
+      );
+      expect(result.provider).toBe("nvidia");
+    });
+
+    it("run throws with no model set", async () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({
+        id: "nope",
+        messages: [{ role: "user", content: "hi" }],
+      });
+
+      await expect(sabi.prompts.run("nope", {})).rejects.toThrow(/no default model/i);
+    });
+
+    it("run throws for unknown prompt", async () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      await expect(sabi.prompts.run("nope", {})).rejects.toThrow(/not found/i);
+    });
+
+    it("supports initial prompt definitions in options", () => {
+      const sabi = createSabi(
+        { groq: { apiKey: "key" } },
+        {
+          promptDefinitions: [
+            {
+              id: "builtin",
+              messages: [{ role: "user", content: "Built-in prompt" }],
+              model: "groq/llama-4-scout",
+            },
+          ],
+        }
+      );
+      const prompt = sabi.prompts.get("builtin");
+      expect(prompt).toBeDefined();
+      expect(prompt!.id).toBe("builtin");
+    });
+
+    it("clear removes all prompts", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompts.register({ id: "a", messages: [{ role: "user", content: "A" }] });
+      sabi.prompts.set("b", "template B");
+      sabi.prompts.clear();
+      expect(sabi.prompts.get("a")).toBeUndefined();
+      expect(sabi.prompts.getTemplate("b")).toBeUndefined();
+    });
+
+    it("legacy prompt API still works alongside structured prompts", () => {
+      const sabi = createSabi({ groq: { apiKey: "key" } });
+      sabi.prompt("legacy", "Hello {name}");
+      sabi.prompts.register({
+        id: "structured",
+        messages: [{ role: "user", content: "Hi {name}" }],
+      });
+
+      expect(sabi.prompt("legacy")).toBe("Hello {name}");
+      expect(sabi.render("legacy", { name: "Ben" })).toBe("Hello Ben");
+      expect(sabi.prompts.get("structured")).toBeDefined();
+    });
+  });
+
   describe("complete", () => {
     it("returns content from the provider", async () => {
       setFetch(async () =>

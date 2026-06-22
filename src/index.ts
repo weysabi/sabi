@@ -20,8 +20,9 @@ import {
   resolveSabiOptions,
 } from "./types";
 import { z } from "zod";
-import { PromptRegistry } from "./prompts";
 import { ProviderClient } from "./providers";
+import { createSabiPrompts } from "./prompts";
+import type { SabiPrompts, PromptDefinition } from "./prompts";
 import { parseModel, tryParseJSON } from "./utils";
 import { createModuleLogger } from "./logger";
 import { estimateCost } from "./pricing";
@@ -101,6 +102,8 @@ export { estimateCost, addPricing } from "./pricing";
 export type { ModelPricing } from "./pricing";
 
 export { zodToJsonSchema } from "./utils";
+export type { SabiPrompts, PromptDefinition } from "./prompts";
+export { Prompt } from "./prompts";
 
 export interface Sabi {
   prompt(name: string, template: string): void;
@@ -111,11 +114,12 @@ export interface Sabi {
   use(plugin: SabiPlugin): void;
   guardrail(name: string, options: GuardrailOptions): void;
   rag: RagEngine;
+  prompts: SabiPrompts;
 }
 
 class SabiImpl implements Sabi {
   private providers: Map<string, ProviderClient>;
-  private prompts: PromptRegistry;
+  prompts: SabiPrompts;
   private opts: ResolvedSabiOptions;
   private readonly log: Catalog;
   private plugins: SabiPlugin[] = [];
@@ -132,7 +136,12 @@ class SabiImpl implements Sabi {
       const validated = ProviderConfigSchema.parse(config);
       this.providers.set(name, new ProviderClient(name, validated, this.opts));
     }
-    this.prompts = new PromptRegistry(options.prompts);
+
+    this.prompts = createSabiPrompts({
+      initialTemplates: options.prompts,
+      initialDefinitions: options.promptDefinitions as PromptDefinition[] | undefined,
+      complete: <T>(req: CompleteRequest) => this.complete<T>(req),
+    });
 
     this.setupRagProvider(providers);
   }
@@ -207,7 +216,7 @@ class SabiImpl implements Sabi {
   prompt(name: string): string | undefined;
   prompt(name: string, template?: string): string | undefined | void {
     if (template === undefined) {
-      return this.prompts.get(name);
+      return this.prompts.getTemplate(name);
     }
     this.prompts.set(name, template);
   }

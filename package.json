@@ -78,6 +78,16 @@
       "types": "./src/guardrails/index.ts",
       "import": "./src/guardrails/index.ts",
       "default": "./src/guardrails/index.ts"
+    },
+    "./prompts": {
+      "types": "./src/prompts/index.ts",
+      "import": "./src/prompts/index.ts",
+      "default": "./src/prompts/index.ts"
+    },
+    "./server": {
+      "types": "./src/server/index.ts",
+      "import": "./src/server/index.ts",
+      "default": "./src/server/index.ts"
     }
   },
   "files": [
