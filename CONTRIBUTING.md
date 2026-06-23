@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering contributing to Sabi!
+Thanks for considering contributing to Weysabi!
 
 ## Setup
 
@@ -27,7 +27,7 @@ bun run check               # All of the above + tests
 
 ```
 src/
-  index.ts          # Sabi class + createSabi() factory
+  index.ts          # Weysabi class + createWeysabi() factory
   types.ts          # Zod schemas + TS types
   providers.ts      # ProviderClient — HTTP, retry, circuit breaker
   providers/

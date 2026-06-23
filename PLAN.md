@@ -1,19 +1,19 @@
-# Sabi — Product Plan
+# Weysabi — Product Plan
 
 **Repository**: `github.com/weysabi/sabi`
-**Package**: `@weysabi/sabi`
+**Package**: `@weysabi/client`
 **Domain**: `weysabi.ai`
 
 ## Vision
 
-Sabi makes building AI products boring. One library. Your own API keys. Provider failover, prompt management, structured output, RAG, streaming, evals, cost tracking, and observability — all in one place.
+Weysabi makes building AI products boring. One library. Your own API keys. Provider failover, prompt management, structured output, RAG, streaming, evals, cost tracking, and observability — all in one place.
 
-For fullstack devs who don't have an ML team. You know your stack (TypeScript, React, Postgres). Sabi adds AI to it.
+For fullstack devs who don't have an ML team. You know your stack (TypeScript, React, Postgres). Weysabi adds AI to it.
 
 ## Core Philosophy
 
-- **Single dependency.** Not LangChain + Pinecone + provider SDKs + eval framework. Just `@weysabi/sabi`.
-- **Your keys, your providers.** Sabi never marks up tokens. You pay OpenAI/Groq/Anthropic directly. Sabi charges for orchestration — versioning, evals, monitoring, team sync.
+- **Single dependency.** Not LangChain + Pinecone + provider SDKs + eval framework. Just `@weysabi/client`.
+- **Your keys, your providers.** Weysabi never marks up tokens. You pay OpenAI/Groq/Anthropic directly. Weysabi charges for orchestration — versioning, evals, monitoring, team sync.
 - **Zero config for common cases.** RAG? Point at a PDF. Structured output? Pass a Zod schema.
 - **Works offline-first.** No cloud required. Cloud adds versioning, evals, monitoring, team.
 - **TypeScript everything.** Autocomplete, type safety, no runtime surprises.
@@ -23,22 +23,22 @@ For fullstack devs who don't have an ML team. You know your stack (TypeScript, R
 
 ### Phase 1 — Orchestration Only (Now)
 
-Users bring their own API keys. Sabi routes, fails over, retries, manages prompts. Revenue from cloud features.
+Users bring their own API keys. Weysabi routes, fails over, retries, manages prompts. Revenue from cloud features.
 
 ```
 sabi.complete({ model: "groq/llama-4-scout", ... })
   → sends directly to Groq's API
-  → Sabi never sees the request body
-  → you pay Groq, not Sabi
+  → Weysabi never sees the request body
+  → you pay Groq, not Weysabi
 ```
 
 ### Phase 2 — Hosted Inference (Future)
 
-Sabi hosts open-source models (Llama, Mistral, DeepSeek). Users use `sabi/llama-4-scout` — Sabi runs inference, charges per token. Cheaper than Groq/Together (no middleman).
+Weysabi hosts open-source models (Llama, Mistral, DeepSeek). Users use `sabi/llama-4-scout` — Weysabi runs inference, charges per token. Cheaper than Groq/Together (no middleman).
 
 ### Phase 3 — Smart Routing (Future)
 
-Sabi routes simple tasks to cheap hosted models, complex tasks to GPT-4/Claude. One bill.
+Weysabi routes simple tasks to cheap hosted models, complex tasks to GPT-4/Claude. One bill.
 
 The orchestration layer is the moat. By the time hosted inference launches, users already trust the routing.
 
@@ -126,20 +126,20 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] `sabi.prompts.run(id, input, overrides?)` — render + execute through full provider pipeline
 - [x] `Prompt.render(input)` — renders `{variable}` in message content
 - [x] `PromptDefinitionSchema` — Zod validation for prompt definitions
-- [x] `@weysabi/sabi/prompts` sub-path export
+- [x] `@weysabi/client/prompts` sub-path export
 - [x] Backward compatible — `sabi.prompt()` / `sabi.render()` continue working
 - [x] Initial prompt definitions via `SabiOptions.promptDefinitions`
 - [ ] File-based `.prompt.yaml` loading (deferred — see PHASES.md)
 
-### Phase 9 — Sabi Server ✅ SHIPPED
+### Phase 9 — Weysabi Server ✅ SHIPPED
 
 - [x] `POST /v1/chat/completions` — OpenAI-compatible, stream + non-stream
 - [x] `GET /v1/models` — list configured models
 - [x] `GET /health` — health check
 - [x] `sabi server --port 3000` CLI command
-- [x] `createSabiServer(sabi)` programmatic API
+- [x] `createServer(sabi)` programmatic API
 - [x] Env-var config via `SABI_PORT`, `SABI_*_API_KEY`
-- [x] `@weysabi/sabi/server` sub-path export
+- [x] `@weysabi/server` sub-path export
 
 ### Phase 10 — Eval Suites (v1.2.0)
 
@@ -167,20 +167,20 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 
 ### Phase 13 — Smart Routing (v3.1.0)
 
-- [ ] `model: "auto"` — Sabi selects best model based on task complexity
+- [ ] `model: "auto"` — Weysabi selects best model based on task complexity
 - [ ] Cost optimization: simple → cheap hosted, complex → GPT-4/Claude
 - [ ] Latency optimization: fastest available provider
-- [ ] One bill from Sabi
+- [ ] One bill from Weysabi
 
 ## Competitive Positioning
 
 ### vs Cencori
 
-Cencori routes through their gateway and charges per token. Sabi is an orchestration library — you bring your own keys, Sabi runs in your process. No data passes through Sabi's infrastructure (unless you use cloud sync). For fintech, healthcare, or regulated workloads, Sabi's BYOK architecture is a structural moat.
+Cencori routes through their gateway and charges per token. Weysabi is an orchestration library — you bring your own keys, Weysabi runs in your process. No data passes through Weysabi's infrastructure (unless you use cloud sync). For fintech, healthcare, or regulated workloads, Weysabi's BYOK architecture is a structural moat.
 
 ### vs LangChain / Vercel AI SDK
 
-| Feature           | LangChain     | Vercel AI SDK    | Sabi               |
+| Feature           | LangChain     | Vercel AI SDK    | Weysabi            |
 | ----------------- | ------------- | ---------------- | ------------------ |
 | Provider failover | Manual        | Manual           | Auto               |
 | Circuit breaker   | No            | No               | Built-in           |
@@ -201,9 +201,9 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 ## Package Structure
 
 ```
-@weysabi/sabi/
+@weysabi/client/
 ├── src/
-│   ├── index.ts                 # SabiImpl class + createSabi() factory
+│   ├── index.ts                 # WeysabiImpl class + createWeysabi() factory
 │   ├── index.test.ts            # Core tests
 │   ├── types.ts                 # Zod schemas + TS types
 │   ├── errors.ts                # Error classes (7 total)
@@ -215,7 +215,7 @@ Cencori routes through their gateway and charges per token. Sabi is an orchestra
 │   │   ├── anthropic.ts         # Anthropic Messages API handler
 │   │   └── google.ts            # Google Gemini handler
 │   ├── prompts/
-│   │   ├── index.ts             # SabiPrompts + createSabiPrompts()
+│   │   ├── index.ts             # WeysabiPrompts + createWeysabiPrompts()
 │   │   ├── prompt.ts            # PromptDefinition, Prompt class + render()
 │   │   └── registry.ts          # PromptRegistry (structured prompt storage)
 │   ├── sse.ts                   # Generic toResponse() for Web Fetch frameworks
@@ -278,9 +278,9 @@ Single package. Sub-path exports for adapters. Cloud features runtime-gated by A
 
 ## Key Decisions
 
-- **Name**: Sabi (Nigerian Pidgin — "wey sabi" = "the one who knows")
+- **Name**: Weysabi (Nigerian Pidgin — "wey sabi" = "the one who knows")
 - **Org**: `github.com/weysabi` — separate from joinremba
-- **One package**: `@weysabi/sabi`. Adapters loaded via sub-path exports (zero cost if unused)
+- **One package**: `@weysabi/client`. Adapters loaded via sub-path exports (zero cost if unused)
 - **BYOK**: No token markup. Revenue from cloud features
 - **Open-core**: Library always free. Cloud gated by API key
 - **Tests next to source**: `src/*.test.ts` pattern (same as catalog, beacon, gate)

@@ -1,11 +1,11 @@
-# Sabi
+# Weysabi
 
 **AI orchestration for fullstack devs.** Use your own API keys. Provider failover, structured output, streaming, circuit breaker. One dependency, zero token markup.
 
 ```ts
-import { createSabi } from "@weysabi/sabi";
+import { createWeysabi } from "@weysabi/client";
 
-const sabi = createSabi({
+const sabi = createWeysabi({
   openai: { apiKey: process.env.OPENAI_API_KEY },
   groq: { apiKey: process.env.GROQ_API_KEY },
   anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
@@ -19,10 +19,10 @@ const result = await sabi.complete({
 });
 ```
 
-## Why Sabi?
+## Why Weysabi?
 
 - **Your keys, your providers.** No markup, no gateway, no middleman.
-- **One dependency.** Not LangChain + provider SDKs. Just `@weysabi/sabi`.
+- **One dependency.** Not LangChain + provider SDKs. Just `@weysabi/client`.
 - **Zero config for common cases.** Structured output? Pass a Zod schema.
 - **Works offline-first.** Cloud features (versioning, evals, monitoring) optional.
 - **No lock-in.** Stop paying, the library still works.
@@ -53,9 +53,9 @@ const result = await sabi.complete({
 | RAG (zero-config, local or cloud)                                            | ✅     |
 | Memory & conversations (persistent sessions, auto-truncation)                | ✅     |
 | ChatSDK (prepare + call + record in one)                                     | ✅     |
-| Sabi Server (deployable AI backend — `POST /v1/chat/completions`)            | 🔜     |
+| Weysabi Server (deployable AI backend — `POST /v1/chat/completions`)         | 🔜     |
 | Guardrails (PII redaction, injection detection, ML moderation, token limits) | ✅     |
-| Sabi Scan (security scanner — `sabi scan`)                                   | 🔜     |
+| Weysabi Scan (security scanner — `sabi scan`)                                | 🔜     |
 | Eval suites                                                                  | 🔜     |
 | Cloud dashboard                                                              | 🔜     |
 | Hosted open-source models                                                    | 🔜     |
@@ -63,13 +63,13 @@ const result = await sabi.complete({
 ## Quick Start
 
 ```bash
-bun add @weysabi/sabi
+bun add @weysabi/client
 ```
 
 ```ts
-import { createSabi } from "@weysabi/sabi";
+import { createWeysabi } from "@weysabi/client";
 
-const sabi = createSabi({
+const sabi = createWeysabi({
   groq: { apiKey: process.env.GROQ_API_KEY },
   openai: { apiKey: process.env.OPENAI_API_KEY },
 });
@@ -93,7 +93,7 @@ console.log(result.content); // "Bonjour"
 Configure any provider with just an API key. Custom `baseUrl` for self-hosted / OpenAI-compatible endpoints.
 
 ```ts
-const sabi = createSabi({
+const sabi = createWeysabi({
   openai: { apiKey: "sk-..." },
   anthropic: { apiKey: "sk-ant-..." },
   google: { apiKey: "AIza..." },
@@ -117,7 +117,7 @@ sabi.complete({ model: "openai/gpt-4o", ... })
 
 ## Structured Output
 
-Pass a Zod schema — Sabi validates the response and retries on parse failure.
+Pass a Zod schema — Weysabi validates the response and retries on parse failure.
 
 ```ts
 import { z } from "zod";
@@ -155,7 +155,7 @@ for await (const chunk of sabi.stream({
 ### Client-side `readStream`
 
 ```ts
-import { readStream } from "@weysabi/sabi";
+import { readStream } from "@weysabi/client";
 
 const response = await fetch("/api/chat", { ... });
 for await (const chunk of readStream(response.body!)) {
@@ -167,10 +167,10 @@ for await (const chunk of readStream(response.body!)) {
 
 ```ts
 // Hono, Next.js, Elysia — any Web Fetch framework
-import { toResponse } from "@weysabi/sabi/hono";
-// import { toResponse } from "@weysabi/sabi/next";
-// import { toResponse } from "@weysabi/sabi/elysia";
-// import { toResponse } from "@weysabi/sabi/sse"; // generic
+import { toResponse } from "@weysabi/client/hono";
+// import { toResponse } from "@weysabi/client/next";
+// import { toResponse } from "@weysabi/client/elysia";
+// import { toResponse } from "@weysabi/client/sse"; // generic
 
 app.post("/chat", async (c) => {
   const stream = sabi.stream({ ... });
@@ -178,14 +178,14 @@ app.post("/chat", async (c) => {
 });
 
 // Express
-import { pipe } from "@weysabi/sabi/express";
+import { pipe } from "@weysabi/client/express";
 app.post("/chat", async (req, res) => {
   const stream = sabi.stream({ ... });
   await pipe(stream, res);
 });
 
 // Fastify
-import { pipe } from "@weysabi/sabi/fastify";
+import { pipe } from "@weysabi/client/fastify";
 app.post("/chat", async (req, reply) => {
   const stream = sabi.stream({ ... });
   await pipe(stream, reply);
@@ -210,7 +210,7 @@ Config is read from `sabi.json`, `~/.config/sabi/config.json`, or `SABI_*_API_KE
 ## Plugin System
 
 ```ts
-const sabi = createSabi({ groq: { apiKey } });
+const sabi = createWeysabi({ groq: { apiKey } });
 
 sabi.use({
   name: "logger",
@@ -231,14 +231,14 @@ sabi.use({
 ## Caching
 
 ```ts
-import { InMemoryCache, RedisCache } from "@weysabi/sabi/cache";
-// or: import { cacheKey } from "@weysabi/sabi";
+import { InMemoryCache, RedisCache } from "@weysabi/client/cache";
+// or: import { cacheKey } from "@weysabi/client";
 
 // In-memory
-const sabi = createSabi(providers, { cache: new InMemoryCache(60_000) });
+const sabi = createWeysabi(providers, { cache: new InMemoryCache(60_000) });
 
 // Redis (any Redis-like client)
-const sabi = createSabi(providers, {
+const sabi = createWeysabi(providers, {
   cache: new RedisCache(new Redis(), 60_000),
 });
 
@@ -248,19 +248,19 @@ const sabi = createSabi(providers, {
 ## OpenTelemetry
 
 ```ts
-import { createOtelPlugin } from "@weysabi/sabi/otel";
+import { createOtelPlugin } from "@weysabi/client/otel";
 import { trace } from "@opentelemetry/api";
 
-const sabi = createSabi(providers);
+const sabi = createWeysabi(providers);
 sabi.use(createOtelPlugin({ tracer: trace.getTracer("my-app") }));
 ```
 
 ## Vercel AI SDK Adapter
 
 ```ts
-import { createSabiProvider } from "@weysabi/sabi/ai-sdk";
+import { createWeysabiProvider } from "@weysabi/client/ai-sdk";
 
-const provider = createSabiProvider(sabi);
+const provider = createWeysabiProvider(sabi);
 const result = await generateText({
   model: provider.languageModel("groq/llama-4-scout"),
   prompt: "Hello",
@@ -270,20 +270,20 @@ const result = await generateText({
 ## Sub-path Exports
 
 ```ts
-import { createSabi } from "@weysabi/sabi";
-import { SabiError, SchemaValidationError } from "@weysabi/sabi/errors";
-import { toResponse } from "@weysabi/sabi/sse";
-import { pipe } from "@weysabi/sabi/express";
-import { InMemoryCache, RedisCache } from "@weysabi/sabi/cache";
-import { createOtelPlugin } from "@weysabi/sabi/otel";
-import { createSabiProvider } from "@weysabi/sabi/ai-sdk";
-import { RagEngine, RagManager, HnswVectorIndex, FsObjectStore } from "@weysabi/sabi/rag";
-import { ConversationMemory } from "@weysabi/sabi/chat";
+import { createWeysabi } from "@weysabi/client";
+import { SabiError, SchemaValidationError } from "@weysabi/client/errors";
+import { toResponse } from "@weysabi/client/sse";
+import { pipe } from "@weysabi/client/express";
+import { InMemoryCache, RedisCache } from "@weysabi/client/cache";
+import { createOtelPlugin } from "@weysabi/client/otel";
+import { createWeysabiProvider } from "@weysabi/client/ai-sdk";
+import { RagEngine, RagManager, HnswVectorIndex, FsObjectStore } from "@weysabi/client/rag";
+import { ConversationMemory } from "@weysabi/client/chat";
 ```
 
 ## Server (🔜)
 
-Deploy Sabi as an OpenAI-compatible HTTP server. Frontend devs point their OpenAI SDK at it and get provider failover, RAG, memory, and caching — no backend code.
+Deploy Weysabi as an OpenAI-compatible HTTP server. Frontend devs point their OpenAI SDK at it and get provider failover, RAG, memory, and caching — no backend code.
 
 ```bash
 # Quick start — uses SABI_*_API_KEY env vars
@@ -292,9 +292,9 @@ bun sabi server --port 3000
 
 ```ts
 // Or embed in your existing Hono app
-import { createSabiServer } from "@weysabi/sabi/server";
+import { createServer } from "@weysabi/server";
 
-const server = createSabiServer(sabi, {
+const server = createServer(sabi, {
   memory: { dbPath: ".sabi/chat.db" },
   rag: { dbPath: ".sabi/rag.db" },
 });
@@ -310,7 +310,7 @@ Works with any OpenAI SDK client — `useChat()`, `new OpenAI()`, `curl`.
 Zero-dependency RAG built in. Ingest documents, auto-chunk, embed, and search — no external vector DB required.
 
 ```ts
-import { RagEngine, RagManager } from "@weysabi/sabi/rag";
+import { RagEngine, RagManager } from "@weysabi/client/rag";
 
 // Single project
 const rag = new RagEngine({
@@ -365,7 +365,7 @@ for await (const ev of docs.loadStream("large-directory/")) {
 Provider-agnostic conversation memory with automatic context management. Persist sessions to SQLite, then call your provider SDK natively.
 
 ```ts
-import { ConversationMemory } from "@weysabi/sabi/chat";
+import { ConversationMemory } from "@weysabi/client/chat";
 
 const memory = new ConversationMemory({
   dbPath: ".sabi/chat.db",
@@ -429,7 +429,7 @@ await memory.deleteSession("user-abc");
 Wraps `ConversationMemory` with a provider adapter for prepare + call + record in one call.
 
 ```ts
-import { ConversationMemory, ChatSDK, OpenAIAdapter } from "@weysabi/sabi/chat";
+import { ConversationMemory, ChatSDK, OpenAIAdapter } from "@weysabi/client/chat";
 
 const memory = new ConversationMemory({ dbPath: ".sabi/chat.db" });
 
@@ -455,7 +455,7 @@ for await (const chunk of chat.stream("session-1", {
 }
 
 // BYO adapter — implement ChatAdapter interface
-import type { ChatAdapter } from "@weysabi/sabi/chat";
+import type { ChatAdapter } from "@weysabi/client/chat";
 class CustomAdapter implements ChatAdapter {
   async chat(model, messages, system) {
     /* ... */
@@ -491,7 +491,7 @@ Swap SQLite for Postgres in production — same API, one import change.
 
 ```ts
 import postgres from "postgres";
-import { ConversationMemory, PgSessionStore } from "@weysabi/sabi/chat";
+import { ConversationMemory, PgSessionStore } from "@weysabi/client/chat";
 
 const sql = postgres("postgres://user:pass@host:5432/db");
 const memory = new ConversationMemory({
@@ -502,7 +502,7 @@ const memory = new ConversationMemory({
 Or bring your own store:
 
 ```ts
-import type { StoreInterface } from "@weysabi/sabi/chat";
+import type { StoreInterface } from "@weysabi/client/chat";
 
 class RedisStore implements StoreInterface {
   // implement all methods — async, same interface
@@ -521,7 +521,7 @@ class RedisStore implements StoreInterface {
 
 - **One dependency** competing with LangChain, not Vercel AI SDK.
 - **Bring your own keys** — no token markup. Revenue from cloud features.
-- **Future: hosted inference** — Sabi hosts Llama/Mistral/DeepSeek. Smart routing sends simple tasks to cheap hosted models, complex ones to GPT-4/Claude.
+- **Future: hosted inference** — Weysabi hosts Llama/Mistral/DeepSeek. Smart routing sends simple tasks to cheap hosted models, complex ones to GPT-4/Claude.
 
 ## License
 

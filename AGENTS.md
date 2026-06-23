@@ -1,12 +1,12 @@
 # Architecture
 
-`@weysabi/sabi` is a single-package, Bun-native AI orchestration library. All source lives in `src/`, tests live next to source.
+`@weysabi/client` is a single-package, Bun-native AI orchestration library. All source lives in `src/`, tests live next to source.
 
 ## Module Map
 
 | File                         | Purpose                                                                    |
 | ---------------------------- | -------------------------------------------------------------------------- |
-| `src/index.ts`               | `SabiImpl` class + `createSabi()` factory. Entry point.                    |
+| `src/index.ts`               | `WeysabiImpl` class + `createWeysabi()` factory. Entry point.              |
 | `src/types.ts`               | Zod schemas + TS interfaces                                                |
 | `src/providers.ts`           | `ProviderClient` — dispatches to handlers, retry, circuit breaker, timeout |
 | `src/providers/handler.ts`   | `ProviderHandler` interface                                                |
@@ -30,14 +30,14 @@
 Each adapter is a flat sub-path export in `package.json`:
 
 ```
-@weysabi/sabi
-@weysabi/sabi/errors
-@weysabi/sabi/sse
-@weysabi/sabi/hono
-@weysabi/sabi/next
-@weysabi/sabi/express
-@weysabi/sabi/fastify
-@weysabi/sabi/elysia
+@weysabi/client
+@weysabi/client/errors
+@weysabi/client/sse
+@weysabi/client/hono
+@weysabi/client/next
+@weysabi/client/express
+@weysabi/client/fastify
+@weysabi/client/elysia
 ```
 
 Zero cost if unused — tree-shakeable by the bundler.
@@ -46,7 +46,7 @@ Zero cost if unused — tree-shakeable by the bundler.
 
 ```mermaid
 flowchart LR
-    SabiImpl --> ProviderClient
+    WeysabiImpl --> ProviderClient
     ProviderClient --> ProviderHandler
     ProviderHandler --> openaiHandler
     ProviderHandler --> anthropicHandler
@@ -59,7 +59,7 @@ Provider + model notation: `provider/model-id` (e.g. `groq/llama-4-scout`, `anth
 
 ## Conventions
 
-- Named exports only. No `export default` except `createSabi` factory.
+- Named exports only. No `export default` except `createWeysabi` factory.
 - Zod for all runtime validation.
 - Custom error classes extending `SabiError`.
 - Tests mock `globalThis.fetch` — no real API calls.
