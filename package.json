@@ -1,0 +1,29 @@
+{
+  "name": "weysabi",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "format": "bunx prettier --write .",
+    "format:check": "bunx prettier --check .",
+    "lint": "bunx eslint packages/",
+    "lint:fix": "bunx eslint packages/ --fix",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test packages/",
+    "test:watch": "bun test --watch packages/"
+  },
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.3.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3"
+  }
+}
