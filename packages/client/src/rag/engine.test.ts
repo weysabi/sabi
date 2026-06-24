@@ -1,9 +1,25 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { unlinkSync } from "fs";
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from "bun:test";
+import { unlinkSync, existsSync, readdirSync } from "fs";
 import { resolve } from "path";
 import { RagEngine } from "./engine";
 
 let testId = 0;
+
+const DB_PATTERN = /^test-rag-engine-\d+\.db/;
+
+beforeAll(() => {
+  const dir = ".sabi";
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir)) {
+    if (DB_PATTERN.test(entry) || DB_PATTERN.test(entry.replace(/-(wal|shm)$/, ""))) {
+      try {
+        unlinkSync(resolve(dir, entry));
+      } catch {
+        /* best effort */
+      }
+    }
+  }
+});
 
 function deterministicEmbedding(text: string, dims = 4): number[] {
   const vec: number[] = [];
@@ -57,22 +73,18 @@ function makeEngine(): { engine: RagEngine; cleanup: () => void } {
     topK: 5,
   });
   engine.setProviders({ provider: "openai", apiKey: "test-key" }, {});
-  return {
-    engine,
-    cleanup: () => {
-      engine.close();
+  function clean(): void {
+    engine.close();
+    for (const suffix of ["", ".hnsw.idx", ".hnsw.vec", "-wal", "-shm"]) {
       try {
-        unlinkSync(path);
+        unlinkSync(path + suffix);
       } catch {
-        /* file may not exist */
+        /* best effort */
       }
-      try {
-        unlinkSync(path + ".hnsw.idx");
-      } catch {
-        /* file may not exist */
-      }
-    },
-  };
+    }
+  }
+
+  return { engine, cleanup: clean };
 }
 
 describe("RagEngine", () => {

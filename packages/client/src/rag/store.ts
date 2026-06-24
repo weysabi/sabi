@@ -352,7 +352,9 @@ export class RagStore {
   ): Promise<RagSearchResult[]> {
     const oversample = filter ? Math.min(topK * 5, 200) : topK;
     const results = this.vectorIndex!.search(queryEmbedding, oversample);
-    if (results.length === 0) return [];
+    if (results.length === 0) {
+      return this.searchBruteForce(queryEmbedding, topK, filter);
+    }
 
     const ids = results.map((r) => r.id);
     const placeholders = ids.map(() => "?").join(",");
