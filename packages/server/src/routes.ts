@@ -1,6 +1,7 @@
 import type { Weysabi } from "@weysabi/client";
 import { translateRequest, translateResponse, translateStreamChunk } from "./translate";
 import { createAuth, createRateLimiter } from "./middleware";
+import { createModuleLogger } from "./logger";
 
 export interface ServerOptions {
   port?: number;
@@ -16,6 +17,8 @@ type HonoApp = any;
 function sseErrorEvent(message: string): string {
   return `data: ${JSON.stringify({ error: { message, type: "sabi_error" } })}\n\n`;
 }
+
+const log = createModuleLogger("routes");
 
 export async function createRouter(
   sabi: Weysabi,
@@ -54,6 +57,17 @@ export async function createRouter(
   const rpm = options.rateLimitRpm ?? 300;
   app.use("/*", createRateLimiter(rpm));
 
+  app.use("/*", async (c: HonoApp, next: HonoApp) => {
+    const start = Date.now();
+    await next();
+    log.info("request", {
+      method: c.req.method,
+      path: c.req.path,
+      status: c.res.status,
+      durationMs: Date.now() - start,
+    });
+  });
+
   app.get("/v1/models", (c: HonoApp) => {
     const providers = options.providers ?? [];
     const data =
@@ -88,6 +102,12 @@ export async function createRouter(
     const stream = body.stream === true;
     const request = translateRequest(body);
 
+    const start = Date.now();
+    log.info("chat completion request", {
+      method: stream ? "stream" : "complete",
+      model: request.model,
+    });
+
     if (stream) {
       const iterable = sabi.stream(request);
       const model = request.model as string;
@@ -100,8 +120,10 @@ export async function createRouter(
                 controller.enqueue(new TextEncoder().encode(line));
               }
               controller.close();
+              log.info("stream complete", { model, latencyMs: Date.now() - start });
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);
+              log.error("stream error", { model, error: message });
               controller.enqueue(new TextEncoder().encode(sseErrorEvent(message)));
               controller.close();
             }
@@ -120,9 +142,19 @@ export async function createRouter(
     try {
       const response = await sabi.complete(request);
       const translated = translateResponse(response, request.model as string);
+      log.info("chat completion success", {
+        model: request.model,
+        latencyMs: Date.now() - start,
+        tokens: response.usage?.totalTokens,
+      });
       return c.json(translated);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      log.error("chat completion error", {
+        model: request.model,
+        error: message,
+        latencyMs: Date.now() - start,
+      });
       return c.json(
         {
           error: {

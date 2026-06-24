@@ -1,5 +1,6 @@
 import { createWeysabi } from "@weysabi/client";
 import { createServer } from "./index";
+import { log } from "./logger";
 
 const PROVIDER_ENV_VARS: Record<string, string> = {
   openai: "SABI_OPENAI_API_KEY",
@@ -24,7 +25,7 @@ for (const [name, envVar] of Object.entries(PROVIDER_ENV_VARS)) {
 }
 
 if (Object.keys(providers).length === 0) {
-  console.error("No providers configured. Set at least one SABI_*_API_KEY env var.");
+  log.error("No providers configured. Set at least one SABI_*_API_KEY env var.");
   process.exit(1);
 }
 
@@ -45,19 +46,21 @@ const server = await createServer(sabi, {
   providers: Object.keys(providers),
 });
 
-console.log(`Weysabi Server running on http://localhost:${server.port}`);
-console.log(`Providers: ${Object.keys(providers).join(", ")}`);
-if (apiKey) console.log("Auth: enabled (SABI_API_KEY)");
-console.log(`Rate limit: ${rateLimitRpm} req/min per IP`);
+log.info("Weysabi Server ready", {
+  port: server.port,
+  providers: Object.keys(providers),
+  auth: !!apiKey,
+  rateLimitRpm,
+});
 
 process.on("SIGINT", () => {
-  console.log("\nShutting down...");
+  log.info("Shutting down (SIGINT)");
   server.stop();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  console.log("\nShutting down...");
+  log.info("Shutting down (SIGTERM)");
   server.stop();
   process.exit(0);
 });
