@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --port 3001",
+    "generate:docs": "fumadocs-mdx source.config.mjs",
     "build": "next build",
     "start": "next start --port 3001",
     "lint": "eslint src/ --ext ts,tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run generate:docs && tsc --noEmit"
   },
   "dependencies": {
     "@types/mdx": "^2.0.14",

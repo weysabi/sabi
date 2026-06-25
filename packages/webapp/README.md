@@ -11,6 +11,7 @@ fully client-side after static deployment.
 
 ```bash
 bun run dev
+bun run generate:docs
 bun run typecheck
 bun run lint
 bun run build
