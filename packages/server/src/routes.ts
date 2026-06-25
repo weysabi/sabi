@@ -6,7 +6,14 @@ import { z } from "zod";
 import { translateRequest, translateResponse, translateStreamChunk } from "./translate";
 import { createAuth, createRateLimiter, createIdempotency, resolveApiKeys } from "./middleware";
 import type { ApiKeyEntry, IdempotencyStore, RateLimitStore } from "./middleware";
-import { IdempotencyConflictError, PayloadTooLargeError, ServerError } from "./errors";
+import {
+  IdempotencyConflictError,
+  PayloadTooLargeError,
+  ServerError,
+  ModelAliasNotFoundError,
+} from "./errors";
+import { buildModelAliases, resolveAlias, getAliasesList } from "./aliases";
+import type { ModelAlias, ModelAliasMap } from "./aliases";
 import { ok, fail, fromServerError } from "./responses";
 import { createModuleLogger } from "./logger";
 
@@ -18,6 +25,7 @@ export interface ServerOptions {
   corsOrigins?: string[];
   rateLimitRpm?: number;
   providers?: string[];
+  modelAliases?: ModelAlias[];
   idempotencyTtl?: number;
   maxBodyBytes?: number;
   trustedProxies?: string[];
@@ -59,6 +67,8 @@ export async function createRouter(
   const maxBodyBytes = options.maxBodyBytes ?? 1024 * 1024;
   const rateLimitStore = options.rateLimitStore ?? new InMemoryRateLimitStore();
   const idempotencyStore = options.idempotencyStore ?? new InMemoryStore();
+
+  const modelAliases: ModelAliasMap = buildModelAliases(options.modelAliases);
 
   const corsOrigins = options.corsOrigins ?? ["*"];
   try {
@@ -121,7 +131,7 @@ export async function createRouter(
 
   app.get("/v1/models", (c: HonoApp) => {
     const providers = options.providers ?? [];
-    const data =
+    const data: Record<string, unknown>[] =
       providers.length > 0
         ? providers.map((name) => ({
             id: `${name}/*`,
@@ -137,6 +147,16 @@ export async function createRouter(
               owned_by: "weysabi",
             },
           ];
+
+    const aliases = getAliasesList(modelAliases);
+    for (const { alias, model } of aliases) {
+      data.push({
+        id: alias,
+        object: "model",
+        created: Math.floor(Date.now() / 1000),
+        owned_by: model,
+      });
+    }
 
     return ok(c, { object: "list", data });
   });
@@ -171,6 +191,7 @@ export async function createRouter(
     }
 
     const request = translateRequest(body);
+    request.model = resolveAlias(modelAliases, request.model as string);
 
     const start = Date.now();
     log.info("chat completion request", {

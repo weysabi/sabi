@@ -71,6 +71,13 @@ export class NotFoundError extends ServerError {
   }
 }
 
+export class ModelAliasNotFoundError extends ServerError {
+  constructor(alias: string) {
+    super(404, "MODEL_NOT_FOUND", `Model alias "${alias}" not found`);
+    this.name = "ModelAliasNotFoundError";
+  }
+}
+
 export class ProviderError extends ServerError {
   constructor(message: string) {
     super(502, "PROVIDER_ERROR", message);

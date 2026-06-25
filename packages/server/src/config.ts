@@ -47,6 +47,11 @@ export function createServerConfig(): Beacon {
       default: "",
       description: "Comma-separated direct proxy IP addresses trusted for forwarded headers",
     },
+    SABI_MODEL_ALIASES: {
+      type: "string",
+      required: false,
+      description: "Comma-separated alias=provider/model pairs (e.g. sabi-fast=groq/llama-4-scout)",
+    },
     SABI_OPENAI_API_KEY: { type: "string", required: false, secret: true },
     SABI_GROQ_API_KEY: { type: "string", required: false, secret: true },
     SABI_ANTHROPIC_API_KEY: { type: "string", required: false, secret: true },

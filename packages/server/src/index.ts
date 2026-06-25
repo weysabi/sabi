@@ -31,12 +31,9 @@ export async function createServer(
     (process.env.SABI_CORS_ORIGINS
       ? process.env.SABI_CORS_ORIGINS.split(",").map((s) => s.trim())
       : ["*"]);
-  const rateLimitRpm =
-    options.rateLimitRpm ?? envInteger("SABI_RATE_LIMIT_RPM", 300);
-  const idempotencyTtl =
-    options.idempotencyTtl ?? envInteger("SABI_IDEMPOTENCY_TTL", 86400);
-  const maxBodyBytes =
-    options.maxBodyBytes ?? envInteger("SABI_MAX_BODY_BYTES", 1024 * 1024);
+  const rateLimitRpm = options.rateLimitRpm ?? envInteger("SABI_RATE_LIMIT_RPM", 300);
+  const idempotencyTtl = options.idempotencyTtl ?? envInteger("SABI_IDEMPOTENCY_TTL", 86400);
+  const maxBodyBytes = options.maxBodyBytes ?? envInteger("SABI_MAX_BODY_BYTES", 1024 * 1024);
   const trustedProxies =
     options.trustedProxies ??
     (process.env.SABI_TRUSTED_PROXIES ?? "")
@@ -52,6 +49,7 @@ export async function createServer(
     corsOrigins,
     rateLimitRpm,
     providers: options.providers,
+    modelAliases: options.modelAliases,
     idempotencyTtl,
     maxBodyBytes,
     trustedProxies,
