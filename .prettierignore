@@ -5,3 +5,6 @@ bun.lock
 .git
 *.yml
 *.yaml
+.next
+out
+next-env.d.ts

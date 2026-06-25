@@ -4,9 +4,7 @@ import type { Weysabi } from "../../weysabi";
 export async function serverCommand(options: { port?: string; host?: string }): Promise<void> {
   const providers = resolveProviders();
   if (Object.keys(providers).length === 0) {
-    console.error(
-      "No providers configured. Set OPENAI_API_KEY (or similar) or create sabi.json."
-    );
+    console.error("No providers configured. Set OPENAI_API_KEY (or similar) or create sabi.json.");
     process.exit(1);
   }
 

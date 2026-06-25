@@ -4,6 +4,7 @@
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
+    "jsx": "preserve",
     "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -26,5 +27,6 @@
       "@weysabi/server/*": ["packages/server/src/*"]
     }
   },
-  "include": ["packages/*/src"]
+  "include": ["packages/*/src"],
+  "exclude": ["packages/webapp/src"]
 }
