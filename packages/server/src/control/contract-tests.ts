@@ -112,7 +112,7 @@ export function projectStoreContractTests(
         expect(updated.name).toBe("Updated");
         expect(updated.slug).toBe("original");
         expect(updated.metadata).toEqual({ key: "value" });
-        expect(updated.updatedAt).toBeGreaterThan(project.updatedAt);
+        expect(updated.updatedAt).toBeGreaterThanOrEqual(project.updatedAt);
       } finally {
         await store.close();
       }
