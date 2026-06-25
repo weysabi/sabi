@@ -1,61 +1,108 @@
 import Link from "next/link";
-import { Logo } from "./logo";
+import { ArrowRight, Check, Copy } from "lucide-react";
+
+const capabilities = ["Provider failover", "Structured output", "Local-first data"];
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden px-4 pt-16 pb-24 sm:pt-24 sm:pb-32 text-center">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-primary/[0.07] to-transparent rounded-full blur-3xl pointer-events-none" />
+    <section className="hero-grid relative overflow-hidden border-b border-border">
+      <div className="hero-glow absolute inset-x-0 top-0 h-[36rem] pointer-events-none" />
+      <div className="relative mx-auto grid max-w-7xl gap-14 px-5 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8 lg:py-28">
+        <div>
+          <div className="animate-fade-in mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-background/75 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-50" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            Open source · v0.9
+          </div>
 
-      <div className="relative mx-auto max-w-4xl">
-        <div className="animate-fade-in mb-4">
-          <Logo className="h-8 mx-auto text-primary" />
+          <h1 className="animate-fade-in animate-delay-100 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
+            Production AI infrastructure,
+            <span className="block text-muted-foreground">inside your stack.</span>
+          </h1>
+
+          <p className="animate-fade-in animate-delay-200 mt-7 max-w-2xl text-lg leading-8 text-muted-foreground">
+            Run models across providers with retries, failover, typed prompts, guardrails,
+            streaming, and local RAG—without routing application traffic through another vendor.
+          </p>
+
+          <div className="animate-fade-in-up animate-delay-300 mt-9 flex flex-wrap items-center gap-3">
+            <Link
+              href="/docs/getting-started"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              Start building
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="https://github.com/weysabi/sabi"
+              className="inline-flex h-11 items-center rounded-lg border border-border bg-background/70 px-5 text-sm font-medium shadow-sm backdrop-blur transition hover:bg-muted"
+            >
+              View on GitHub
+            </Link>
+          </div>
+
+          <div className="animate-fade-in animate-delay-500 mt-9 flex flex-wrap gap-x-6 gap-y-3">
+            {capabilities.map((capability) => (
+              <span
+                key={capability}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+                {capability}
+              </span>
+            ))}
+          </div>
         </div>
 
-        <h1 className="animate-fade-in animate-delay-100 text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
-          AI orchestration
-          <br />
-          <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-            for fullstack devs
-          </span>
-        </h1>
+        <div className="animate-fade-in-up animate-delay-200 relative">
+          <div className="absolute -inset-8 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card/95 shadow-2xl shadow-black/10 backdrop-blur">
+            <div className="flex h-11 items-center justify-between border-b border-border bg-muted/40 px-4">
+              <div className="flex gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              </div>
+              <span className="font-mono text-[11px] text-muted-foreground">app.ts</span>
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+            <pre className="overflow-x-auto p-5 text-[13px] leading-6 sm:p-6">
+              <code>{`import { createWeysabi } from "@weysabi/sabi";
 
-        <p className="animate-fade-in animate-delay-200 mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          One library, zero markup. Provider failover, structured output, RAG, guardrails, and
-          prompts — all in a single Bun-native package.
-        </p>
+const sabi = createWeysabi({
+  groq: { apiKey: process.env.GROQ_API_KEY },
+  openai: { apiKey: process.env.OPENAI_API_KEY },
+});
 
-        <div className="animate-fade-in-up animate-delay-300 mt-10 flex items-center justify-center gap-4 flex-wrap">
-          <Link
-            href="/docs"
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Get started
-          </Link>
-          <Link
-            href="https://github.com/weysabi/sabi"
-            className="inline-flex h-12 items-center justify-center rounded-xl border border-border px-8 text-sm font-medium transition-all hover:bg-muted hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 mr-2" fill="currentColor">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-            </svg>
-            GitHub
-          </Link>
-        </div>
+const result = await sabi.complete({
+  model: "groq/llama-4-scout",
+  fallbacks: ["openai/gpt-4o-mini"],
+  messages: [
+    { role: "user", content: "Summarize this incident." },
+  ],
+});
 
-        <div className="animate-fade-in animate-delay-500 mt-16 flex items-center justify-center gap-8 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            Bun native
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            TypeScript
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-            MIT license
-          </span>
+console.log(result.content);`}</code>
+            </pre>
+            <div className="grid grid-cols-3 border-t border-border bg-muted/25 text-center">
+              {[
+                ["Primary", "Groq"],
+                ["Fallback", "OpenAI"],
+                ["Traffic", "Your infra"],
+              ].map(([label, value]) => (
+                <div key={label} className="border-r border-border px-2 py-3 last:border-r-0">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {label}
+                  </div>
+                  <div className="mt-1 text-xs font-medium">{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>

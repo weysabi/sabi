@@ -1,5 +1,18 @@
 # Weysabi Webapp
 
+The webapp contains the Weysabi marketing site, Fumadocs-powered documentation, and the
+self-hosted administration screen.
+
+Documentation source lives in `content/docs`. Fumadocs generates `.source` during development and
+builds; generated source is ignored by Git.
+
+```bash
+bun run dev
+bun run typecheck
+bun run lint
+bun run build
+```
+
 Static Next.js documentation and the self-hosted server administration interface.
 
 ## Admin connection

@@ -11,6 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/mdx": "^2.0.14",
+    "fumadocs-core": "^15.8.5",
+    "fumadocs-mdx": "^13.0.8",
+    "fumadocs-ui": "^15.8.5",
     "lucide-react": "^0.460",
     "next": "^15",
     "react": "^19",

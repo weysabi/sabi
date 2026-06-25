@@ -7,9 +7,9 @@ export function CtaSection() {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-t from-primary/[0.05] to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative mx-auto max-w-3xl px-4 py-24 text-center">
-        <h2 className="text-4xl font-bold mb-4 tracking-tight">Ready to ship?</h2>
+        <h2 className="text-4xl font-bold mb-4 tracking-tight">Start inside your stack.</h2>
         <p className="text-lg text-muted-foreground mb-10 max-w-lg mx-auto">
-          Install with a single command. No config file required to start.
+          Install the SDK, bring your provider keys, and keep the execution path under your control.
         </p>
 
         <div className="animate-fade-in-up flex items-center justify-center gap-4 flex-wrap">

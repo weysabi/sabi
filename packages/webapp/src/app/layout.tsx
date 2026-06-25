@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
+import { RootProvider } from "fumadocs-ui/provider/next";
+import "fumadocs-ui/style.css";
 import "./global.css";
 
 const inter = Inter({
@@ -11,16 +13,18 @@ const inter = Inter({
 export const metadata = {
   title: {
     template: "%s | Weysabi",
-    default: "Weysabi — AI orchestration for fullstack devs",
+    default: "Weysabi — production AI infrastructure for TypeScript",
   },
   description:
-    "One library, zero markup. Provider failover, structured output, RAG, streaming, guardrails, and prompts — all in a single Bun-native package.",
+    "Local-first TypeScript infrastructure for running production AI applications across providers.",
 };
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body style={{ fontFamily: "var(--font-inter)" }}>{children}</body>
+      <body style={{ fontFamily: "var(--font-inter)" }}>
+        <RootProvider search={{ enabled: false }}>{children}</RootProvider>
+      </body>
     </html>
   );
 }

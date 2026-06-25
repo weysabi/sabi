@@ -4,7 +4,6 @@ import { HeroSection } from "@/components/hero";
 import { StatsStrip } from "@/components/stats-strip";
 import { FeaturesSection } from "@/components/features";
 import { CodeDemoSection } from "@/components/code-demo";
-import { TestimonialsSection } from "@/components/testimonials";
 import { CtaSection } from "@/components/cta-section";
 
 export default function HomePage() {
@@ -43,7 +42,6 @@ export default function HomePage() {
         <StatsStrip />
         <FeaturesSection />
         <CodeDemoSection />
-        <TestimonialsSection />
         <CtaSection />
       </main>
 

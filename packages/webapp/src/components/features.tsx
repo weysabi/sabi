@@ -55,10 +55,11 @@ export function FeaturesSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-24">
       <h2 className="text-3xl font-bold text-center mb-4">
-        Everything you need, nothing you don&apos;t
+        A production path from request to response
       </h2>
       <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
-        A single dependency replaces the usual 4-5 SDK stack. No wrappers, no lock-in.
+        Compose only the capabilities your application needs. The core execution path remains small,
+        typed, and provider-neutral.
       </p>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((feature, i) => (
