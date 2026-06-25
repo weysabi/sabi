@@ -49,6 +49,7 @@ export function resolveApiKeys(apiKey?: string, apiKeys?: ApiKeyEntry[]): ApiKey
 function getScopeForPath(method: string, path: string): string[] | null {
   if (path === "/v1/chat/completions" && method === "POST") return ["chat:write"];
   if (path.startsWith("/v1/models")) return ["models:read"];
+  if (path.startsWith("/v1/admin")) return ["admin"];
   return null;
 }
 

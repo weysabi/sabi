@@ -175,6 +175,29 @@ export async function createRouter(
     return ok(c, { status: "ok", timestamp: Date.now() });
   });
 
+  app.get("/v1/admin/stats", async (c: HonoApp) => {
+    const allStats = await usageLedger.stats();
+
+    const allRecords = await usageLedger.query({ limit: 10_000 });
+    const keyFingerprints = new Set(allRecords.records.map((r) => r.keyFingerprint));
+
+    return ok(c, {
+      totalRequests: allStats.totalRequests,
+      totalTokens: allStats.totalTokens,
+      totalCostUsd: allStats.totalCostUsd,
+      activeKeys: keyFingerprints.size,
+    });
+  });
+
+  app.get("/v1/admin/usage", async (c: HonoApp) => {
+    const key = c.req.query("key") || undefined;
+    const limit = Number(c.req.query("limit")) || 50;
+    const offset = Number(c.req.query("offset")) || 0;
+
+    const result = await usageLedger.query({ keyFingerprint: key, limit, offset });
+    return ok(c, result);
+  });
+
   app.post("/v1/chat/completions", async (c: HonoApp) => {
     const body = (await c.req.json()) as Record<string, unknown>;
     const stream = body.stream === true;

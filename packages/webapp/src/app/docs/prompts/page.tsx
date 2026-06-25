@@ -11,7 +11,7 @@ export default function PromptsPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-3">Overview</h2>
         <p className="mb-3 text-sm text-muted-foreground">
-          Weysabi's prompt management system lets you define typed, versioned prompt templates and
+          Weysabi&apos;s prompt management system lets you define typed, versioned prompt templates and
           execute them through the full provider pipeline in one call.
         </p>
       </section>

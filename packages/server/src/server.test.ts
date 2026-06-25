@@ -1345,3 +1345,159 @@ describe("Model aliases", () => {
     });
   });
 });
+
+describe("Admin endpoints", () => {
+  describe("Scoped auth", () => {
+    it("chat:write key gets 403 on admin endpoints", async () => {
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, {
+        apiKeys: [{ key: "sk-chat", scopes: ["chat:write"] }],
+      });
+
+      const statsRes = await router.fetch(
+        new Request("http://localhost/v1/admin/stats", {
+          headers: { authorization: "Bearer sk-chat" },
+        })
+      );
+      expect(statsRes.status).toBe(403);
+
+      const usageRes = await router.fetch(
+        new Request("http://localhost/v1/admin/usage", {
+          headers: { authorization: "Bearer sk-chat" },
+        })
+      );
+      expect(usageRes.status).toBe(403);
+    });
+
+    it("admin key can access admin endpoints", async () => {
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, {
+        apiKeys: [{ key: "sk-admin", scopes: ["admin"] }],
+      });
+
+      const statsRes = await router.fetch(
+        new Request("http://localhost/v1/admin/stats", {
+          headers: { authorization: "Bearer sk-admin" },
+        })
+      );
+      expect(statsRes.status).toBe(200);
+
+      const usageRes = await router.fetch(
+        new Request("http://localhost/v1/admin/usage", {
+          headers: { authorization: "Bearer sk-admin" },
+        })
+      );
+      expect(usageRes.status).toBe(200);
+    });
+  });
+
+  describe("GET /v1/admin/stats", () => {
+    it("returns zero stats when no usage recorded", async () => {
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi);
+
+      const res = await router.fetch(new Request("http://localhost/v1/admin/stats"));
+      const body = (await res.json()) as Record<string, unknown>;
+
+      expect(body.totalRequests).toBe(0);
+      expect(body.totalTokens).toBe(0);
+      expect(body.totalCostUsd).toBe(0);
+      expect(body.activeKeys).toBe(0);
+    });
+
+    it("returns aggregated stats from recorded usage", async () => {
+      const ledger = new InMemoryUsageLedger();
+      await ledger.record({
+        keyFingerprint: "key-1",
+        model: "groq/llama-4-scout",
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+        estimatedCostUsd: 0.001,
+        timestamp: Date.now(),
+        status: "success",
+      });
+      await ledger.record({
+        keyFingerprint: "key-2",
+        model: "openai/gpt-4o",
+        promptTokens: 50,
+        completionTokens: 50,
+        totalTokens: 100,
+        estimatedCostUsd: 0.003,
+        timestamp: Date.now(),
+        status: "success",
+      });
+
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, { usageLedger: ledger });
+
+      const res = await router.fetch(new Request("http://localhost/v1/admin/stats"));
+      const body = (await res.json()) as Record<string, unknown>;
+
+      expect(body.totalRequests).toBe(2);
+      expect(body.totalTokens).toBe(130);
+      expect(body.totalCostUsd).toBe(0.004);
+      expect(body.activeKeys).toBe(2);
+    });
+  });
+
+  describe("GET /v1/admin/usage", () => {
+    it("returns paginated usage records", async () => {
+      const ledger = new InMemoryUsageLedger();
+      for (let i = 0; i < 10; i++) {
+        await ledger.record({
+          keyFingerprint: "key-1",
+          model: "groq/llama-4-scout",
+          promptTokens: 10,
+          completionTokens: 20,
+          totalTokens: 30,
+          estimatedCostUsd: 0.001,
+          timestamp: Date.now() + i,
+          status: "success",
+        });
+      }
+
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, { usageLedger: ledger });
+
+      const res = await router.fetch(
+        new Request("http://localhost/v1/admin/usage?limit=3&offset=2")
+      );
+      const body = (await res.json()) as { records: unknown[]; total: number };
+
+      expect(body.records).toHaveLength(3);
+      expect(body.total).toBe(10);
+    });
+
+    it("filters by key fingerprint", async () => {
+      const ledger = new InMemoryUsageLedger();
+      await ledger.record({
+        keyFingerprint: "key-a",
+        model: "groq/llama-4-scout",
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+        timestamp: Date.now(),
+        status: "success",
+      });
+      await ledger.record({
+        keyFingerprint: "key-b",
+        model: "openai/gpt-4o",
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+        timestamp: Date.now(),
+        status: "success",
+      });
+
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, { usageLedger: ledger });
+
+      const res = await router.fetch(new Request("http://localhost/v1/admin/usage?key=key-a"));
+      const body = (await res.json()) as { records: unknown[]; total: number };
+
+      expect(body.records).toHaveLength(1);
+      expect(body.total).toBe(1);
+    });
+  });
+});
