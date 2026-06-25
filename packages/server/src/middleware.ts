@@ -5,6 +5,7 @@ import type { RateLimitStore } from "@joinremba/gate/rate-limit";
 import { idempotency, InMemoryStore } from "@joinremba/gate/idempotency";
 import type { IdempotencyInstance, IdempotencyStore } from "@joinremba/gate/idempotency";
 import { AuthError, InsufficientPermissionsError, RateLimitError } from "./errors";
+import { extractKeyFromAuth } from "./quota";
 
 export type { ApiKeyEntry };
 export type { IdempotencyInstance, IdempotencyStore, RateLimitStore };
@@ -115,8 +116,11 @@ export function createRateLimiter(
   const limiter = rateLimit({
     max: rpm,
     store,
-    keyFn: (req: Request) =>
-      `ip:${resolveClientIp(req, options.getRemoteAddress?.(req), options.trustedProxies)}`,
+    keyFn: (req: Request) => {
+      const authKey = extractKeyFromAuth(req);
+      if (authKey) return `key:${authKey}`;
+      return `ip:${resolveClientIp(req, options.getRemoteAddress?.(req), options.trustedProxies)}`;
+    },
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

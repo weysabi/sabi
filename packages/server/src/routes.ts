@@ -11,11 +11,14 @@ import {
   PayloadTooLargeError,
   ServerError,
   ModelAliasNotFoundError,
+  QuotaExceededError,
 } from "./errors";
 import { buildModelAliases, resolveAlias, getAliasesList } from "./aliases";
 import type { ModelAlias, ModelAliasMap } from "./aliases";
 import { ok, fail, fromServerError } from "./responses";
 import { createModuleLogger } from "./logger";
+import { InMemoryTokenQuotaStore, extractKeyFromAuth } from "./quota";
+import type { TokenQuotaConfig, TokenQuotaStore } from "./quota";
 
 export interface ServerOptions {
   port?: number;
@@ -26,6 +29,8 @@ export interface ServerOptions {
   rateLimitRpm?: number;
   providers?: string[];
   modelAliases?: ModelAlias[];
+  quotaConfig?: TokenQuotaConfig;
+  quotaStore?: TokenQuotaStore;
   idempotencyTtl?: number;
   maxBodyBytes?: number;
   trustedProxies?: string[];
@@ -69,6 +74,8 @@ export async function createRouter(
   const idempotencyStore = options.idempotencyStore ?? new InMemoryStore();
 
   const modelAliases: ModelAliasMap = buildModelAliases(options.modelAliases);
+  const quotaStore: TokenQuotaStore = options.quotaStore ?? new InMemoryTokenQuotaStore();
+  const quotaConfig = options.quotaConfig;
 
   const corsOrigins = options.corsOrigins ?? ["*"];
   try {
@@ -192,6 +199,14 @@ export async function createRouter(
 
     const request = translateRequest(body);
     request.model = resolveAlias(modelAliases, request.model as string);
+    const authKey = extractKeyFromAuth(c.req.raw);
+
+    if (quotaConfig && authKey) {
+      const check = await quotaStore.check(authKey, quotaConfig);
+      if (!check.allowed) {
+        throw new QuotaExceededError(check.reason ?? "Token quota exceeded");
+      }
+    }
 
     const start = Date.now();
     log.info("chat completion request", {
@@ -210,6 +225,9 @@ export async function createRouter(
               let next = await iterator.next();
               while (!next.done) {
                 const chunk = next.value;
+                if (chunk.done && chunk.usage?.totalTokens && authKey && quotaStore) {
+                  await quotaStore.record(authKey, chunk.usage.totalTokens);
+                }
                 const line = translateStreamChunk(chunk, model);
                 controller.enqueue(new TextEncoder().encode(line));
                 next = await iterator.next();
@@ -240,6 +258,10 @@ export async function createRouter(
 
     const response = await sabi.complete(request);
     const translated = translateResponse(response, request.model as string);
+
+    if (authKey && quotaStore && response.usage?.totalTokens) {
+      await quotaStore.record(authKey, response.usage.totalTokens);
+    }
 
     if (idempKey && requestFingerprint) {
       await idemp.setResponse(idempKey, {

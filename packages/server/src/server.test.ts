@@ -5,6 +5,7 @@ import { createWeysabi } from "@weysabi/sabi";
 import type { StreamRequest, Weysabi } from "@weysabi/sabi";
 import { resolveApiKeys, parseApiKeys, resolveClientIp } from "./middleware";
 import { buildModelAliases, resolveAlias, getAliasesList } from "./aliases";
+import { InMemoryTokenQuotaStore, extractKeyFromAuth } from "./quota";
 
 describe("translateRequest", () => {
   it("converts OpenAI-style request to Weysabi CompleteRequest", () => {
@@ -943,6 +944,173 @@ describe("Idempotency", () => {
     // Streaming responses are not cached, but both should work
     expect(text1).toInclude("data: ");
     expect(text2).toInclude("data: ");
+  });
+});
+
+describe("Token quotas", () => {
+  describe("InMemoryTokenQuotaStore", () => {
+    it("allows within limits", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      const check = await store.check("key-1", { maxTokensPerMin: 1000 });
+      expect(check.allowed).toBeTrue();
+    });
+
+    it("rejects when quota exceeded", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      await store.record("key-1", 600);
+      await store.record("key-1", 500);
+      const check = await store.check("key-1", { maxTokensPerMin: 1000 });
+      expect(check.allowed).toBeFalse();
+      expect(check.reason).toInclude("Token quota exceeded");
+    });
+
+    it("allows after window slides", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      await store.record("key-1", 1000);
+      // Advance time past the 1-minute window
+      const future = Date.now() + 61_000;
+      const realNow = Date.now;
+      Date.now = () => future;
+      try {
+        const check = await store.check("key-1", { maxTokensPerMin: 1000 });
+        expect(check.allowed).toBeTrue();
+      } finally {
+        Date.now = realNow;
+      }
+    });
+
+    it("tracks per-key independently", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      await store.record("key-a", 1000);
+      const checkA = await store.check("key-a", { maxTokensPerMin: 1000 });
+      expect(checkA.allowed).toBeFalse();
+      const checkB = await store.check("key-b", { maxTokensPerMin: 1000 });
+      expect(checkB.allowed).toBeTrue();
+    });
+  });
+
+  describe("extractKeyFromAuth", () => {
+    it("extracts from Bearer token", () => {
+      const req = new Request("http://localhost", {
+        headers: { authorization: "Bearer sk-long-secret-key" },
+      });
+      expect(extractKeyFromAuth(req)).toBe("sk-long-secret-k");
+    });
+
+    it("returns null without auth header", () => {
+      const req = new Request("http://localhost");
+      expect(extractKeyFromAuth(req)).toBeNull();
+    });
+
+    it("returns null for empty token", () => {
+      const req = new Request("http://localhost", {
+        headers: { authorization: "Bearer " },
+      });
+      expect(extractKeyFromAuth(req)).toBeNull();
+    });
+  });
+
+  describe("Route integration", () => {
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeAll(() => {
+      originalFetch = globalThis.fetch;
+      globalThis.fetch = (() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              choices: [{ message: { content: "ok", role: "assistant" } }],
+              usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } }
+          )
+        )) as unknown as typeof globalThis.fetch;
+    });
+
+    afterAll(() => {
+      globalThis.fetch = originalFetch;
+    });
+
+    it("returns 429 when token quota exceeded", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      await store.record("sk-quota-key", 1000);
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, {
+        quotaConfig: { maxTokensPerMin: 1000 },
+        quotaStore: store,
+        apiKey: "sk-quota-key",
+      });
+
+      const res = await router.fetch(
+        new Request("http://localhost/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "Bearer sk-quota-key",
+          },
+          body: JSON.stringify({
+            model: "groq/llama-4-scout",
+            messages: [{ role: "user", content: "Hi" }],
+          }),
+        })
+      );
+
+      expect(res.status).toBe(429);
+      const body = (await res.json()) as Record<string, unknown>;
+      expect((body.error as Record<string, unknown>).code).toBe("QUOTA_EXCEEDED");
+    });
+
+    it("records token usage after successful request", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, {
+        quotaConfig: { maxTokensPerMin: 10000 },
+        quotaStore: store,
+        apiKey: "sk-recording",
+      });
+
+      const res = await router.fetch(
+        new Request("http://localhost/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "Bearer sk-recording",
+          },
+          body: JSON.stringify({
+            model: "groq/llama-4-scout",
+            messages: [{ role: "user", content: "Hi" }],
+          }),
+        })
+      );
+
+      expect(res.status).toBe(200);
+
+      // Second request should still be allowed (30 < 10000)
+      const check = await store.check("sk-recording", { maxTokensPerMin: 10000 });
+      expect(check.allowed).toBeTrue();
+    });
+
+    it("bypasses quota when no auth key", async () => {
+      const store = new InMemoryTokenQuotaStore();
+      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(sabi, {
+        quotaConfig: { maxTokensPerMin: 1 },
+        quotaStore: store,
+      });
+
+      const res = await router.fetch(
+        new Request("http://localhost/v1/chat/completions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            model: "groq/llama-4-scout",
+            messages: [{ role: "user", content: "Hi" }],
+          }),
+        })
+      );
+
+      expect(res.status).toBe(200);
+    });
   });
 });
 

@@ -78,6 +78,13 @@ export class ModelAliasNotFoundError extends ServerError {
   }
 }
 
+export class QuotaExceededError extends ServerError {
+  constructor(message: string) {
+    super(429, "QUOTA_EXCEEDED", message);
+    this.name = "QuotaExceededError";
+  }
+}
+
 export class ProviderError extends ServerError {
   constructor(message: string) {
     super(502, "PROVIDER_ERROR", message);

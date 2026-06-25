@@ -50,6 +50,8 @@ export async function createServer(
     rateLimitRpm,
     providers: options.providers,
     modelAliases: options.modelAliases,
+    quotaConfig: options.quotaConfig,
+    quotaStore: options.quotaStore,
     idempotencyTtl,
     maxBodyBytes,
     trustedProxies,
