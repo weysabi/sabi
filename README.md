@@ -3,7 +3,7 @@
 **AI orchestration for fullstack devs.** Use your own API keys. Provider failover, structured output, streaming, circuit breaker. One dependency, zero token markup.
 
 ```ts
-import { createWeysabi } from "@weysabi/client";
+import { createWeysabi } from "@weysabi/sabi";
 
 const sabi = createWeysabi({
   openai: { apiKey: process.env.OPENAI_API_KEY },
@@ -22,7 +22,7 @@ const result = await sabi.complete({
 ## Why Weysabi?
 
 - **Your keys, your providers.** No markup, no gateway, no middleman.
-- **One dependency.** Not LangChain + provider SDKs. Just `@weysabi/client`.
+- **One dependency.** Not LangChain + provider SDKs. Just `@weysabi/sabi`.
 - **Zero config for common cases.** Structured output? Pass a Zod schema.
 - **Works offline-first.** Cloud features (versioning, evals, monitoring) optional.
 - **No lock-in.** Stop paying, the library still works.
@@ -53,21 +53,21 @@ const result = await sabi.complete({
 | RAG (zero-config, local or cloud)                                            | ✅     |
 | Memory & conversations (persistent sessions, auto-truncation)                | ✅     |
 | ChatSDK (prepare + call + record in one)                                     | ✅     |
-| Weysabi Server (deployable AI backend — `POST /v1/chat/completions`)         | 🔜     |
+| Weysabi Server (deployable AI backend — `POST /v1/chat/completions`)         | ✅     |
 | Guardrails (PII redaction, injection detection, ML moderation, token limits) | ✅     |
-| Weysabi Scan (security scanner — `sabi scan`)                                | 🔜     |
-| Eval suites                                                                  | 🔜     |
-| Cloud dashboard                                                              | 🔜     |
-| Hosted open-source models                                                    | 🔜     |
+
+| Eval suites | 🔜 |
+| Cloud dashboard | 🔜 |
+| Hosted open-source models | 🔜 |
 
 ## Quick Start
 
 ```bash
-bun add @weysabi/client
+bun add @weysabi/sabi
 ```
 
 ```ts
-import { createWeysabi } from "@weysabi/client";
+import { createWeysabi } from "@weysabi/sabi";
 
 const sabi = createWeysabi({
   groq: { apiKey: process.env.GROQ_API_KEY },
@@ -155,7 +155,7 @@ for await (const chunk of sabi.stream({
 ### Client-side `readStream`
 
 ```ts
-import { readStream } from "@weysabi/client";
+import { readStream } from "@weysabi/sabi";
 
 const response = await fetch("/api/chat", { ... });
 for await (const chunk of readStream(response.body!)) {
@@ -167,10 +167,10 @@ for await (const chunk of readStream(response.body!)) {
 
 ```ts
 // Hono, Next.js, Elysia — any Web Fetch framework
-import { toResponse } from "@weysabi/client/hono";
-// import { toResponse } from "@weysabi/client/next";
-// import { toResponse } from "@weysabi/client/elysia";
-// import { toResponse } from "@weysabi/client/sse"; // generic
+import { toResponse } from "@weysabi/sabi/hono";
+// import { toResponse } from "@weysabi/sabi/next";
+// import { toResponse } from "@weysabi/sabi/elysia";
+// import { toResponse } from "@weysabi/sabi/sse"; // generic
 
 app.post("/chat", async (c) => {
   const stream = sabi.stream({ ... });
@@ -178,14 +178,14 @@ app.post("/chat", async (c) => {
 });
 
 // Express
-import { pipe } from "@weysabi/client/express";
+import { pipe } from "@weysabi/sabi/express";
 app.post("/chat", async (req, res) => {
   const stream = sabi.stream({ ... });
   await pipe(stream, res);
 });
 
 // Fastify
-import { pipe } from "@weysabi/client/fastify";
+import { pipe } from "@weysabi/sabi/fastify";
 app.post("/chat", async (req, reply) => {
   const stream = sabi.stream({ ... });
   await pipe(stream, reply);
@@ -231,8 +231,8 @@ sabi.use({
 ## Caching
 
 ```ts
-import { InMemoryCache, RedisCache } from "@weysabi/client/cache";
-// or: import { cacheKey } from "@weysabi/client";
+import { InMemoryCache, RedisCache } from "@weysabi/sabi/cache";
+// or: import { cacheKey } from "@weysabi/sabi";
 
 // In-memory
 const sabi = createWeysabi(providers, { cache: new InMemoryCache(60_000) });
@@ -248,7 +248,7 @@ const sabi = createWeysabi(providers, {
 ## OpenTelemetry
 
 ```ts
-import { createOtelPlugin } from "@weysabi/client/otel";
+import { createOtelPlugin } from "@weysabi/sabi/otel";
 import { trace } from "@opentelemetry/api";
 
 const sabi = createWeysabi(providers);
@@ -258,7 +258,7 @@ sabi.use(createOtelPlugin({ tracer: trace.getTracer("my-app") }));
 ## Vercel AI SDK Adapter
 
 ```ts
-import { createWeysabiProvider } from "@weysabi/client/ai-sdk";
+import { createWeysabiProvider } from "@weysabi/sabi/ai-sdk";
 
 const provider = createWeysabiProvider(sabi);
 const result = await generateText({
@@ -270,47 +270,52 @@ const result = await generateText({
 ## Sub-path Exports
 
 ```ts
-import { createWeysabi } from "@weysabi/client";
-import { SabiError, SchemaValidationError } from "@weysabi/client/errors";
-import { toResponse } from "@weysabi/client/sse";
-import { pipe } from "@weysabi/client/express";
-import { InMemoryCache, RedisCache } from "@weysabi/client/cache";
-import { createOtelPlugin } from "@weysabi/client/otel";
-import { createWeysabiProvider } from "@weysabi/client/ai-sdk";
-import { RagEngine, RagManager, HnswVectorIndex, FsObjectStore } from "@weysabi/client/rag";
-import { ConversationMemory } from "@weysabi/client/chat";
+import { createWeysabi } from "@weysabi/sabi";
+import { WeysabiError, SchemaValidationError } from "@weysabi/sabi/errors";
+import { toResponse } from "@weysabi/sabi/sse";
+import { pipe } from "@weysabi/sabi/express";
+import { InMemoryCache, RedisCache } from "@weysabi/sabi/cache";
+import { createOtelPlugin } from "@weysabi/sabi/otel";
+import { createWeysabiProvider } from "@weysabi/sabi/ai-sdk";
+import { RagEngine, RagManager } from "@weysabi/sabi/rag";
+import { ConversationMemory } from "@weysabi/sabi/chat";
+import { createServer } from "@weysabi/server";
 ```
 
-## Server (🔜)
+## Server
 
-Deploy Weysabi as an OpenAI-compatible HTTP server. Frontend devs point their OpenAI SDK at it and get provider failover, RAG, memory, and caching — no backend code.
+Deploy Weysabi as an OpenAI-compatible HTTP server. Frontend devs point their OpenAI SDK at it and get provider failover, caching, rate limiting, and auth — no backend code.
 
 ```bash
 # Quick start — uses SABI_*_API_KEY env vars
+bunx @weysabi/server --port 3000
+
+# Or via the sabi CLI
 bun sabi server --port 3000
 ```
 
 ```ts
-// Or embed in your existing Hono app
+// Embed in your app
 import { createServer } from "@weysabi/server";
 
-const server = createServer(sabi, {
-  memory: { dbPath: ".sabi/chat.db" },
-  rag: { dbPath: ".sabi/rag.db" },
+const server = await createServer(sabi, {
+  apiKey: "sk-my-key",
+  providers: ["groq", "openai"],
 });
-app.route("/v1", server);
 ```
 
 **Endpoints:** `POST /v1/chat/completions` (OpenAI-compatible, streaming), `GET /v1/models`, `GET /health`, `POST /v1/rag/query`, `POST /v1/chat/session`.
 
 Works with any OpenAI SDK client — `useChat()`, `new OpenAI()`, `curl`.
 
+**Configuration:** Set `SABI_*_API_KEY` env vars for providers. Optional: `SABI_API_KEY` for auth, `SABI_API_KEYS` for scoped keys (`key:chat:write;key2:admin`), `SABI_PORT` (default `3000`), `SABI_RATE_LIMIT_RPM` (default `300`).
+
 ## RAG (Retrieval-Augmented Generation)
 
 Zero-dependency RAG built in. Ingest documents, auto-chunk, embed, and search — no external vector DB required.
 
 ```ts
-import { RagEngine, RagManager } from "@weysabi/client/rag";
+import { RagEngine, RagManager } from "@weysabi/sabi/rag";
 
 // Single project
 const rag = new RagEngine({
@@ -365,7 +370,7 @@ for await (const ev of docs.loadStream("large-directory/")) {
 Provider-agnostic conversation memory with automatic context management. Persist sessions to SQLite, then call your provider SDK natively.
 
 ```ts
-import { ConversationMemory } from "@weysabi/client/chat";
+import { ConversationMemory } from "@weysabi/sabi/chat";
 
 const memory = new ConversationMemory({
   dbPath: ".sabi/chat.db",
@@ -429,7 +434,7 @@ await memory.deleteSession("user-abc");
 Wraps `ConversationMemory` with a provider adapter for prepare + call + record in one call.
 
 ```ts
-import { ConversationMemory, ChatSDK, OpenAIAdapter } from "@weysabi/client/chat";
+import { ConversationMemory, ChatSDK, OpenAIAdapter } from "@weysabi/sabi/chat";
 
 const memory = new ConversationMemory({ dbPath: ".sabi/chat.db" });
 
@@ -455,7 +460,7 @@ for await (const chunk of chat.stream("session-1", {
 }
 
 // BYO adapter — implement ChatAdapter interface
-import type { ChatAdapter } from "@weysabi/client/chat";
+import type { ChatAdapter } from "@weysabi/sabi/chat";
 class CustomAdapter implements ChatAdapter {
   async chat(model, messages, system) {
     /* ... */
@@ -491,7 +496,7 @@ Swap SQLite for Postgres in production — same API, one import change.
 
 ```ts
 import postgres from "postgres";
-import { ConversationMemory, PgSessionStore } from "@weysabi/client/chat";
+import { ConversationMemory, PgSessionStore } from "@weysabi/sabi/chat";
 
 const sql = postgres("postgres://user:pass@host:5432/db");
 const memory = new ConversationMemory({
@@ -502,7 +507,7 @@ const memory = new ConversationMemory({
 Or bring your own store:
 
 ```ts
-import type { StoreInterface } from "@weysabi/client/chat";
+import type { StoreInterface } from "@weysabi/sabi/chat";
 
 class RedisStore implements StoreInterface {
   // implement all methods — async, same interface

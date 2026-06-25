@@ -23,7 +23,7 @@ module.exports = {
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/consistent-type-imports": "error",
   },
-  ignorePatterns: ["node_modules", "dist", "bun.lock", ".git"],
+  ignorePatterns: ["node_modules", "dist", "bun.lock", ".git", "packages/webapp"],
   overrides: [
     {
       files: ["*.test.ts", "*.test.tsx"],

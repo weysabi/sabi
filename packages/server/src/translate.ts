@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { CompleteRequest, CompleteResponse, Message } from "@weysabi/client";
-import type { StreamChunk } from "@weysabi/client";
+import type { CompleteRequest, CompleteResponse, Message } from "@weysabi/sabi";
+import type { StreamChunk } from "@weysabi/sabi";
 
 const OpenAiMessageSchema = z.object({
   role: z.string(),
@@ -9,7 +9,7 @@ const OpenAiMessageSchema = z.object({
 
 const OpenAiRequestSchema = z.object({
   model: z.string().min(1),
-  messages: z.array(OpenAiMessageSchema).optional(),
+  messages: z.array(OpenAiMessageSchema).min(1),
   stream: z.boolean().optional(),
   temperature: z.number().optional(),
   max_tokens: z.number().int().positive().optional(),
@@ -81,31 +81,37 @@ export function translateResponse(
 }
 
 export function translateStreamChunk(chunk: StreamChunk, model: string): string {
-  if (chunk.done) {
+  if (chunk.done && !chunk.usage) {
     return "data: [DONE]\n\n";
   }
 
   const id = `sabi-${crypto.randomUUID()}`;
-  const data = {
+  const data: Record<string, unknown> = {
     id,
     object: "chat.completion.chunk",
     created: Math.floor(Date.now() / 1000),
     model,
-    choices: [
-      {
-        index: 0,
-        delta: {
-          content: chunk.content,
-        },
-        finish_reason: null as string | null,
-      },
-    ],
+    choices: chunk.content
+      ? [
+          {
+            index: 0,
+            delta: {
+              content: chunk.content,
+            },
+            finish_reason: chunk.done ? "stop" : null,
+          },
+        ]
+      : [],
   };
 
-  if (chunk.usage && data.choices[0]) {
-    data.choices[0].finish_reason = "stop";
-    return `data: ${JSON.stringify(data)}\n\ndata: [DONE]\n\n`;
+  if (chunk.usage) {
+    data.usage = {
+      prompt_tokens: chunk.usage.promptTokens,
+      completion_tokens: chunk.usage.completionTokens,
+      total_tokens: chunk.usage.totalTokens,
+    };
   }
 
-  return `data: ${JSON.stringify(data)}\n\n`;
+  const event = `data: ${JSON.stringify(data)}\n\n`;
+  return chunk.done ? `${event}data: [DONE]\n\n` : event;
 }
