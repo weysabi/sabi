@@ -23,7 +23,16 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body style={{ fontFamily: "var(--font-inter)" }}>
-        <RootProvider search={{ enabled: false }}>{children}</RootProvider>
+        <RootProvider
+          search={{
+            options: {
+              type: "static",
+              api: "/api/search",
+            },
+          }}
+        >
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

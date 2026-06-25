@@ -7,9 +7,6 @@ export function baseOptions(): BaseLayoutProps {
       title: <Logo className="h-7" />,
       url: "/",
     },
-    searchToggle: {
-      enabled: false,
-    },
     links: [
       { text: "Documentation", url: "/docs", active: "nested-url" },
       { text: "Admin", url: "/admin" },

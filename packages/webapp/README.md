@@ -6,6 +6,9 @@ self-hosted administration screen.
 Documentation source lives in `content/docs`. Fumadocs generates `.source` during development and
 builds; generated source is ignored by Git.
 
+Documentation search uses an Orama index exported to `/api/search` at build time. Search remains
+fully client-side after static deployment.
+
 ```bash
 bun run dev
 bun run typecheck
