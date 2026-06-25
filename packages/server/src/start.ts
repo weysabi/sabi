@@ -47,6 +47,12 @@ const corsOrigins = config
   .map((s: string) => s.trim());
 const rateLimitRpm = config.get<number>("SABI_RATE_LIMIT_RPM");
 const idempotencyTtl = config.get<number>("SABI_IDEMPOTENCY_TTL");
+const maxBodyBytes = config.get<number>("SABI_MAX_BODY_BYTES");
+const trustedProxies = config
+  .get<string>("SABI_TRUSTED_PROXIES")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 const server = await createServer(sabi, {
   port,
@@ -56,6 +62,8 @@ const server = await createServer(sabi, {
   rateLimitRpm,
   providers: Object.keys(providers),
   idempotencyTtl,
+  maxBodyBytes,
+  trustedProxies,
 });
 
 log.info("Weysabi Server ready", {

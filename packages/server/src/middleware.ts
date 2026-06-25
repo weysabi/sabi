@@ -8,6 +8,11 @@ import { AuthError, InsufficientPermissionsError, RateLimitError } from "./error
 export type { ApiKeyEntry };
 export type { IdempotencyInstance };
 
+export interface RateLimiterOptions {
+  trustedProxies?: string[];
+  getRemoteAddress?: (request: Request) => string | undefined;
+}
+
 export function parseApiKeys(raw: string): ApiKeyEntry[] {
   return raw.split(";").map((entry) => {
     const colonIdx = entry.indexOf(":");
@@ -76,18 +81,38 @@ export function createAuth(keys: ApiKeyEntry[]) {
   };
 }
 
-export function createRateLimiter(rpm: number) {
+export function resolveClientIp(
+  request: Request,
+  remoteAddress: string | undefined,
+  trustedProxies: string[] = []
+): string {
+  if (!remoteAddress) return "unknown";
+
+  const trusted = new Set(trustedProxies);
+  if (!trusted.has(remoteAddress)) return remoteAddress;
+
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const chain = [...(forwarded ?? []), remoteAddress];
+
+  for (let index = chain.length - 1; index >= 0; index--) {
+    const address = chain[index]!;
+    if (!trusted.has(address)) return address;
+  }
+
+  return request.headers.get("x-real-ip")?.trim() || remoteAddress;
+}
+
+export function createRateLimiter(rpm: number, options: RateLimiterOptions = {}) {
   const store = new InMemoryRateLimitStore();
   const limiter = rateLimit({
     max: rpm,
     store,
-    keyFn: (req: Request) => {
-      const ip =
-        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        req.headers.get("x-real-ip") ||
-        "unknown";
-      return `ip:${ip}`;
-    },
+    keyFn: (req: Request) =>
+      `ip:${resolveClientIp(req, options.getRemoteAddress?.(req), options.trustedProxies)}`,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

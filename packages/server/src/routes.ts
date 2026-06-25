@@ -1,9 +1,10 @@
 import type { Weysabi } from "@weysabi/sabi";
 import { AllModelsFailedError } from "@weysabi/sabi/errors";
+import { z } from "zod";
 import { translateRequest, translateResponse, translateStreamChunk } from "./translate";
 import { createAuth, createRateLimiter, createIdempotency, resolveApiKeys } from "./middleware";
 import type { ApiKeyEntry } from "./middleware";
-import { ServerError } from "./errors";
+import { PayloadTooLargeError, ServerError } from "./errors";
 import { ok, fail, fromServerError } from "./responses";
 import { createModuleLogger } from "./logger";
 
@@ -15,6 +16,9 @@ export interface ServerOptions {
   rateLimitRpm?: number;
   providers?: string[];
   idempotencyTtl?: number;
+  maxBodyBytes?: number;
+  trustedProxies?: string[];
+  getRemoteAddress?: (request: Request) => string | undefined;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +42,7 @@ export async function createRouter(
     throw new Error("Hono is required for Weysabi Server. Install it: bun add hono");
   }
   const app = new Hono();
+  const maxBodyBytes = options.maxBodyBytes ?? 1024 * 1024;
 
   const corsOrigins = options.corsOrigins ?? ["*"];
   try {
@@ -62,7 +67,24 @@ export async function createRouter(
   }
 
   const rpm = options.rateLimitRpm ?? 300;
-  app.use("/*", createRateLimiter(rpm));
+  app.use(
+    "/*",
+    createRateLimiter(rpm, {
+      trustedProxies: options.trustedProxies,
+      getRemoteAddress: options.getRemoteAddress,
+    })
+  );
+
+  const { bodyLimit } = await import("hono/body-limit");
+  app.use(
+    "/v1/chat/completions",
+    bodyLimit({
+      maxSize: maxBodyBytes,
+      onError: () => {
+        throw new PayloadTooLargeError(maxBodyBytes);
+      },
+    })
+  );
 
   const idemp = createIdempotency(options.idempotencyTtl ?? 86400);
 
@@ -125,24 +147,32 @@ export async function createRouter(
     });
 
     if (stream) {
-      const iterable = sabi.stream(request);
+      const iterable = sabi.stream({ ...request, signal: c.req.raw.signal });
+      const iterator = iterable[Symbol.asyncIterator]();
       const model = request.model as string;
       return new Response(
         new ReadableStream({
           async pull(controller) {
             try {
-              for await (const chunk of iterable) {
+              let next = await iterator.next();
+              while (!next.done) {
+                const chunk = next.value;
                 const line = translateStreamChunk(chunk, model);
                 controller.enqueue(new TextEncoder().encode(line));
+                next = await iterator.next();
               }
               controller.close();
               log.info("stream complete", { model, latencyMs: Date.now() - start });
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);
               log.error("stream error", { model, error: message });
+              if (c.req.raw.signal.aborted) return;
               controller.enqueue(new TextEncoder().encode(sseErrorEvent(message)));
               controller.close();
             }
+          },
+          async cancel() {
+            await iterator.return?.();
           },
         }),
         {
@@ -184,6 +214,14 @@ export async function createRouter(
     if (err instanceof AllModelsFailedError) {
       log.error("all models failed", { errors: err.errors });
       return fail(c, 502, err.message, "ALL_MODELS_FAILED");
+    }
+
+    if (err instanceof SyntaxError) {
+      return fail(c, 400, "Request body must be valid JSON", "INVALID_JSON");
+    }
+
+    if (err instanceof z.ZodError) {
+      return fail(c, 400, "Request validation failed", "VALIDATION_ERROR", err.issues);
     }
 
     log.error("unhandled error", {

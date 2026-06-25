@@ -644,6 +644,7 @@ class WeysabiImpl implements Weysabi {
           topP: parsed.topP,
           stop: parsed.stop,
           timeout: this.opts.timeout,
+          signal: parsed.signal,
         });
 
         this.log.info({

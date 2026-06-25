@@ -35,6 +35,17 @@ export function createServerConfig(): Beacon {
       default: 86400,
       description: "Idempotency key TTL in seconds",
     },
+    SABI_MAX_BODY_BYTES: {
+      type: "integer",
+      default: 1048576,
+      description: "Maximum request body size in bytes",
+    },
+    SABI_TRUSTED_PROXIES: {
+      type: "string",
+      required: false,
+      default: "",
+      description: "Comma-separated direct proxy IP addresses trusted for forwarded headers",
+    },
     SABI_OPENAI_API_KEY: { type: "string", required: false, secret: true },
     SABI_GROQ_API_KEY: { type: "string", required: false, secret: true },
     SABI_ANTHROPIC_API_KEY: { type: "string", required: false, secret: true },

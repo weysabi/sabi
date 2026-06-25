@@ -30,6 +30,15 @@ export async function createServer(
           .map((s) => s.trim()));
   const rateLimitRpm = options.rateLimitRpm ?? config.get<number>("SABI_RATE_LIMIT_RPM");
   const idempotencyTtl = options.idempotencyTtl ?? config.get<number>("SABI_IDEMPOTENCY_TTL");
+  const maxBodyBytes = options.maxBodyBytes ?? config.get<number>("SABI_MAX_BODY_BYTES");
+  const trustedProxies =
+    options.trustedProxies ??
+    config
+      .get<string>("SABI_TRUSTED_PROXIES")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  const remoteAddresses = new WeakMap<Request, string>();
 
   const router = await createRouter(sabi, {
     port,
@@ -39,11 +48,18 @@ export async function createServer(
     rateLimitRpm,
     providers: options.providers,
     idempotencyTtl,
+    maxBodyBytes,
+    trustedProxies,
+    getRemoteAddress: (request) => remoteAddresses.get(request),
   });
 
   const server = Bun.serve({
     port,
-    fetch: router.fetch as (req: Request) => Response | Promise<Response>,
+    fetch(req, server) {
+      const address = server.requestIP(req)?.address;
+      if (address) remoteAddresses.set(req, address);
+      return router.fetch(req);
+    },
   });
 
   return {

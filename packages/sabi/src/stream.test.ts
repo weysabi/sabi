@@ -174,6 +174,37 @@ describe("stream", () => {
     expect(attempts).toBe(1);
   });
 
+  it("aborts the upstream provider stream when the request signal aborts", async () => {
+    let providerSignal: AbortSignal | undefined;
+    setFetch(async (_url, init) => {
+      const signal = init?.signal as AbortSignal;
+      providerSignal = signal;
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
+    });
+
+    const controller = new AbortController();
+    const sabi = createWeysabi({ groq: { apiKey: "key" } }, { retry: { maxRetries: 0 } });
+    const pending = (async () => {
+      for await (const _chunk of sabi.stream({
+        model: "groq/llama-4-scout",
+        messages: [{ role: "user", content: "hi" }],
+        signal: controller.signal,
+      })) {
+        // consume
+      }
+    })();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+
+    await expect(pending).rejects.toThrow("All models failed");
+    expect(providerSignal?.aborted).toBe(true);
+  });
+
   it("throws AllModelsFailedError when all providers fail", async () => {
     setFetch(async () => errorResponse(503));
 

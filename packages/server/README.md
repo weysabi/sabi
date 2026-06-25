@@ -32,17 +32,19 @@ sabi server --port 3000
 
 ## Configuration
 
-| Env Var                  | Default | Description                           |
-| ------------------------ | ------- | ------------------------------------- |
-| `SABI_PORT`              | `3000`  | HTTP server port                      |
-| `SABI_API_KEY`           | —       | Bearer token auth (disabled if unset) |
-| `SABI_CORS_ORIGINS`      | `*`     | Comma-separated CORS origins          |
-| `SABI_RATE_LIMIT_RPM`    | `300`   | Per-IP rate limit (requests/minute)   |
-| `SABI_GROQ_API_KEY`      | —       | Groq provider key                     |
-| `SABI_OPENAI_API_KEY`    | —       | OpenAI provider key                   |
-| `SABI_ANTHROPIC_API_KEY` | —       | Anthropic provider key                |
-| `SABI_GOOGLE_API_KEY`    | —       | Google Gemini provider key            |
-| `SABI_MISTRAL_API_KEY`   | —       | Mistral provider key                  |
+| Env Var                  | Default   | Description                           |
+| ------------------------ | --------- | ------------------------------------- |
+| `SABI_PORT`              | `3000`    | HTTP server port                      |
+| `SABI_API_KEY`           | —         | Bearer token auth (disabled if unset) |
+| `SABI_CORS_ORIGINS`      | `*`       | Comma-separated CORS origins          |
+| `SABI_RATE_LIMIT_RPM`    | `300`     | Per-IP rate limit (requests/minute)   |
+| `SABI_MAX_BODY_BYTES`    | `1048576` | Maximum request body size             |
+| `SABI_TRUSTED_PROXIES`   | empty     | Comma-separated direct proxy IPs      |
+| `SABI_GROQ_API_KEY`      | —         | Groq provider key                     |
+| `SABI_OPENAI_API_KEY`    | —         | OpenAI provider key                   |
+| `SABI_ANTHROPIC_API_KEY` | —         | Anthropic provider key                |
+| `SABI_GOOGLE_API_KEY`    | —         | Google Gemini provider key            |
+| `SABI_MISTRAL_API_KEY`   | —         | Mistral provider key                  |
 
 ## Deployment
 
@@ -85,5 +87,8 @@ fly deploy
 
 - **Auth**: Set `SABI_API_KEY` to require `Authorization: Bearer <key>` on all endpoints except `/health`
 - **Rate limiting**: Per-IP sliding window (configurable via `SABI_RATE_LIMIT_RPM`, default 300/min)
+- **Proxy safety**: Forwarded IP headers are ignored unless the direct peer appears in `SABI_TRUSTED_PROXIES`
+- **Body limits**: Completion requests are capped by `SABI_MAX_BODY_BYTES`
+- **Disconnect handling**: Client cancellation aborts the upstream provider stream
 - **CORS**: Configurable origins via `SABI_CORS_ORIGINS` (comma-separated, default `*`)
 - **No data leakage**: Provider API keys never exposed in responses

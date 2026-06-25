@@ -9,7 +9,7 @@ const OpenAiMessageSchema = z.object({
 
 const OpenAiRequestSchema = z.object({
   model: z.string().min(1),
-  messages: z.array(OpenAiMessageSchema).optional(),
+  messages: z.array(OpenAiMessageSchema).min(1),
   stream: z.boolean().optional(),
   temperature: z.number().optional(),
   max_tokens: z.number().int().positive().optional(),

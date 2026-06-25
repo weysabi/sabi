@@ -46,6 +46,13 @@ export class ValidationError extends ServerError {
   }
 }
 
+export class PayloadTooLargeError extends ServerError {
+  constructor(maxBytes: number) {
+    super(413, "PAYLOAD_TOO_LARGE", `Request body exceeds the ${maxBytes} byte limit`);
+    this.name = "PayloadTooLargeError";
+  }
+}
+
 export class NotFoundError extends ServerError {
   constructor(path: string) {
     super(404, "NOT_FOUND", `Route ${path} not found`);

@@ -179,6 +179,7 @@ export const StreamRequestSchema = z.object({
   topP: z.number().min(0).max(1).optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   tools: z.array(ToolDefinitionSchema).optional(),
+  signal: z.custom<AbortSignal>((value) => value instanceof AbortSignal).optional(),
 });
 export type StreamRequest = z.input<typeof StreamRequestSchema>;
 

@@ -329,6 +329,7 @@ export class ProviderClient {
       topP?: number;
       stop?: string | string[];
       timeout: number;
+      signal?: AbortSignal;
     }
   ): Promise<AsyncIterable<StreamChunk>> {
     this.checkCircuitBreaker();
@@ -351,13 +352,16 @@ export class ProviderClient {
     const timeout = this.timeout;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const signal = params.signal
+      ? AbortSignal.any([controller.signal, params.signal])
+      : controller.signal;
 
     try {
       const response = await fetch(url, {
         method: "POST",
         headers,
         body: JSON.stringify(body),
-        signal: controller.signal,
+        signal,
       });
 
       if (!response.ok) {
@@ -416,6 +420,9 @@ export class ProviderClient {
       clearTimeout(timeoutId);
       if (err instanceof ProviderRequestError) throw err;
       if (err instanceof Error && err.name === "AbortError") {
+        if (params.signal?.aborted) {
+          throw new ProviderRequestError(this.name, modelId, undefined, "Stream aborted");
+        }
         hooks?.onFailure?.({
           model: `${this.name}/${modelId}`,
           provider: this.name,

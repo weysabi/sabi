@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { translateRequest, translateResponse, translateStreamChunk } from "./translate";
 import { createRouter } from "./routes";
 import { createWeysabi } from "@weysabi/sabi";
-import { resolveApiKeys, parseApiKeys } from "./middleware";
+import type { StreamRequest, Weysabi } from "@weysabi/sabi";
+import { resolveApiKeys, parseApiKeys, resolveClientIp } from "./middleware";
 
 describe("translateRequest", () => {
   it("converts OpenAI-style request to Weysabi CompleteRequest", () => {
@@ -49,12 +50,12 @@ describe("translateRequest", () => {
     expect(result.rag).toBeTrue();
   });
 
-  it("handles missing messages", () => {
-    const result = translateRequest({
-      model: "groq/llama-4-scout",
-    });
-
-    expect(result.messages).toEqual([]);
+  it("rejects missing messages", () => {
+    expect(() =>
+      translateRequest({
+        model: "groq/llama-4-scout",
+      })
+    ).toThrow();
   });
 });
 
@@ -308,6 +309,98 @@ describe("Server integration", () => {
     const error = body.error as Record<string, unknown>;
     expect(error.message).toInclude("All models failed");
     expect(error.code).toBe("ALL_MODELS_FAILED");
+  });
+
+  it("returns 400 for malformed JSON", async () => {
+    const req = new Request("http://localhost/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{not-json",
+    });
+
+    const res = await router.fetch(req);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("INVALID_JSON");
+  });
+
+  it("returns 400 for schema validation errors", async () => {
+    const req = new Request("http://localhost/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: "groq/llama-4-scout" }),
+    });
+
+    const res = await router.fetch(req);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; details: unknown[] } };
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.details.length).toBeGreaterThan(0);
+  });
+
+  it("returns 413 when the request body exceeds the configured limit", async () => {
+    const limited = await createRouter(createWeysabi({ groq: { apiKey: "test-key" } }), {
+      maxBodyBytes: 64,
+    });
+    const req = new Request("http://localhost/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "groq/llama-4-scout",
+        messages: [{ role: "user", content: "x".repeat(100) }],
+      }),
+    });
+
+    const res = await limited.fetch(req);
+    expect(res.status).toBe(413);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("PAYLOAD_TOO_LARGE");
+  });
+
+  it("passes the client abort signal into Weysabi streams", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    const fakeSabi = {
+      stream(request: StreamRequest) {
+        capturedSignal = request.signal;
+        return (async function* () {
+          yield { content: "", done: true };
+        })();
+      },
+    } as unknown as Weysabi;
+    const signalRouter = await createRouter(fakeSabi);
+    const controller = new AbortController();
+    const req = new Request("http://localhost/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "groq/llama-4-scout",
+        messages: [{ role: "user", content: "Hi" }],
+        stream: true,
+      }),
+    });
+
+    const res = await signalRouter.fetch(req);
+    expect(capturedSignal?.aborted).toBe(false);
+    controller.abort();
+    expect(capturedSignal?.aborted).toBe(true);
+    await res.body?.cancel();
+  });
+});
+
+describe("resolveClientIp", () => {
+  it("ignores forwarded headers from an untrusted peer", () => {
+    const request = new Request("http://localhost", {
+      headers: { "x-forwarded-for": "198.51.100.10" },
+    });
+    expect(resolveClientIp(request, "203.0.113.5", ["10.0.0.1"])).toBe("203.0.113.5");
+  });
+
+  it("selects the nearest untrusted address behind trusted proxies", () => {
+    const request = new Request("http://localhost", {
+      headers: { "x-forwarded-for": "198.51.100.10, 10.0.0.2" },
+    });
+    expect(resolveClientIp(request, "10.0.0.1", ["10.0.0.1", "10.0.0.2"])).toBe("198.51.100.10");
   });
 });
 
