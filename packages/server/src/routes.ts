@@ -10,7 +10,6 @@ import {
   IdempotencyConflictError,
   PayloadTooLargeError,
   ServerError,
-  ModelAliasNotFoundError,
   QuotaExceededError,
 } from "./errors";
 import { buildModelAliases, resolveAlias, getAliasesList } from "./aliases";
@@ -20,7 +19,7 @@ import { createModuleLogger } from "./logger";
 import { InMemoryTokenQuotaStore, extractKeyFromAuth } from "./quota";
 import type { TokenQuotaConfig, TokenQuotaStore } from "./quota";
 import { InMemoryUsageLedger } from "./ledger";
-import type { UsageLedger, UsageRecord } from "./ledger";
+import type { UsageLedger } from "./ledger";
 
 export interface ServerOptions {
   port?: number;

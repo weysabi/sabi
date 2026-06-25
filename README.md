@@ -55,10 +55,10 @@ const result = await sabi.complete({
 | ChatSDK (prepare + call + record in one)                                     | ✅     |
 | Weysabi Server (deployable AI backend — `POST /v1/chat/completions`)         | ✅     |
 | Guardrails (PII redaction, injection detection, ML moderation, token limits) | ✅     |
-| Weysabi Scan (security scanner — `sabi scan`)                                | 🔜     |
-| Eval suites                                                                  | 🔜     |
-| Cloud dashboard                                                              | 🔜     |
-| Hosted open-source models                                                    | 🔜     |
+
+| Eval suites | 🔜 |
+| Cloud dashboard | 🔜 |
+| Hosted open-source models | 🔜 |
 
 ## Quick Start
 
