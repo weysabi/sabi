@@ -1,5 +1,7 @@
 export { createSqliteControlPlaneStore } from "./sqlite-store";
 export { createProjectService } from "./service";
+export { createPromptService } from "./prompt-service";
+export { registerControlRoutes } from "./control-routes";
 
 export type {
   ApiKeyStore,

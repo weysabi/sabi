@@ -60,6 +60,7 @@ export async function createServer(
     trustedProxies,
     rateLimitStore: options.rateLimitStore,
     idempotencyStore: options.idempotencyStore,
+    controlPlaneStore: options.controlPlaneStore,
     getRemoteAddress: (request) => remoteAddresses.get(request),
   });
 
@@ -121,6 +122,7 @@ export {
   CreatePromptVersionInputSchema,
   CreateRunInputSchema,
   createProjectService,
+  createPromptService,
   createSqliteControlPlaneStore,
   ControlConflictError,
   ControlError,
@@ -141,6 +143,7 @@ export {
   UpdateProjectInputSchema,
   UpdatePromptInputSchema,
   UpdateRunInputSchema,
+  registerControlRoutes,
 } from "./control";
 export type {
   ApiKeyQuery,
