@@ -43,7 +43,12 @@ import type {
   ApiKeyQuery,
 } from "./types";
 import { fingerprintApiKey } from "../quota";
-import { ControlConflictError, ControlResourceNotFoundError } from "./errors";
+import {
+  ControlConflictError,
+  ControlResourceNotFoundError,
+  ProjectNotFoundError,
+  ProjectSlugConflictError,
+} from "./errors";
 
 function now(): number {
   return Date.now();
@@ -331,10 +336,7 @@ class SqliteProjectStore implements ProjectStore {
       );
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        throw Object.assign(new Error(`Project slug "${input.slug}" is already taken`), {
-          code: "PROJECT_SLUG_CONFLICT",
-          statusCode: 409,
-        });
+        throw new ProjectSlugConflictError(input.slug);
       }
       throw err;
     }
@@ -373,10 +375,7 @@ class SqliteProjectStore implements ProjectStore {
   async update(projectId: string, input: UpdateProjectInput): Promise<Project> {
     const existing = await this.get(projectId);
     if (!existing) {
-      throw Object.assign(new Error(`Project "${projectId}" not found`), {
-        code: "PROJECT_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw new ProjectNotFoundError(projectId);
     }
     const name = input.name ?? existing.name;
     const slug = input.slug ?? existing.slug;
@@ -389,10 +388,7 @@ class SqliteProjectStore implements ProjectStore {
       );
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        throw Object.assign(new Error(`Project slug "${slug}" is already taken`), {
-          code: "PROJECT_SLUG_CONFLICT",
-          statusCode: 409,
-        });
+        throw new ProjectSlugConflictError(slug);
       }
       throw err;
     }
@@ -436,12 +432,9 @@ class SqlitePromptStore implements PromptStore {
       );
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        throw Object.assign(
-          new Error(`Prompt slug "${input.slug}" is already taken in this project`),
-          {
-            code: "PROMPT_SLUG_CONFLICT",
-            statusCode: 409,
-          }
+        throw new ControlConflictError(
+          `Prompt slug "${input.slug}" is already taken in this project`,
+          "PROMPT_SLUG_CONFLICT"
         );
       }
       throw err;
@@ -491,10 +484,7 @@ class SqlitePromptStore implements PromptStore {
   ): Promise<ManagedPrompt> {
     const existing = await this.getPrompt(projectId, promptId);
     if (!existing) {
-      throw Object.assign(new Error(`Prompt "${promptId}" not found`), {
-        code: "PROMPT_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw notFound("Prompt", promptId, "PROMPT_NOT_FOUND");
     }
     const name = input.name ?? existing.name;
     const slug = input.slug ?? existing.slug;
@@ -506,10 +496,10 @@ class SqlitePromptStore implements PromptStore {
       );
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        throw Object.assign(new Error(`Prompt slug "${slug}" is already taken in this project`), {
-          code: "PROMPT_SLUG_CONFLICT",
-          statusCode: 409,
-        });
+        throw new ControlConflictError(
+          `Prompt slug "${slug}" is already taken in this project`,
+          "PROMPT_SLUG_CONFLICT"
+        );
       }
       throw err;
     }
@@ -721,10 +711,7 @@ class SqliteConversationStore implements ConversationStore {
   ): Promise<Conversation> {
     const existing = await this.getConversation(projectId, conversationId);
     if (!existing) {
-      throw Object.assign(new Error(`Conversation "${conversationId}" not found`), {
-        code: "CONVERSATION_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw notFound("Conversation", conversationId, "CONVERSATION_NOT_FOUND");
     }
     const title = input.title !== undefined ? input.title : existing.title;
     const summary = input.summary !== undefined ? input.summary : existing.summary;
@@ -792,10 +779,7 @@ class SqliteConversationStore implements ConversationStore {
   ): Promise<ConversationMessage> {
     const existing = await this.getMessage(projectId, messageId);
     if (!existing) {
-      throw Object.assign(new Error(`Message "${messageId}" not found`), {
-        code: "MESSAGE_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw notFound("Message", messageId, "MESSAGE_NOT_FOUND");
     }
     const content = input.content ?? existing.content;
     const status = input.status ?? existing.status;
@@ -938,10 +922,7 @@ class SqliteRunStore implements RunStore {
   async update(projectId: string, runId: string, input: UpdateRunInput): Promise<Run> {
     const existing = await this.get(projectId, runId);
     if (!existing) {
-      throw Object.assign(new Error(`Run "${runId}" not found`), {
-        code: "RUN_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw notFound("Run", runId, "RUN_NOT_FOUND");
     }
     const resolvedModel =
       input.resolvedModel !== undefined ? input.resolvedModel : existing.resolvedModel;
@@ -1101,14 +1082,9 @@ class SqliteDocumentStore implements DocumentStore {
       );
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("UNIQUE")) {
-        throw Object.assign(
-          new Error(
-            `Document with content hash "${input.contentHash}" already exists in this project`
-          ),
-          {
-            code: "DOCUMENT_CONTENT_CONFLICT",
-            statusCode: 409,
-          }
+        throw new ControlConflictError(
+          `Document with content hash "${input.contentHash}" already exists in this project`,
+          "DOCUMENT_CONTENT_CONFLICT"
         );
       }
       throw err;
@@ -1162,10 +1138,7 @@ class SqliteDocumentStore implements DocumentStore {
   ): Promise<ManagedDocument> {
     const existing = await this.get(projectId, documentId);
     if (!existing) {
-      throw Object.assign(new Error(`Document "${documentId}" not found`), {
-        code: "DOCUMENT_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw notFound("Document", documentId, "DOCUMENT_NOT_FOUND");
     }
     this.db.run("UPDATE documents SET status = ?, updated_at = ? WHERE id = ? AND project_id = ?", [
       status,
@@ -1260,10 +1233,7 @@ class SqliteApiKeyStore implements ApiKeyStore {
   async update(projectId: string, keyId: string, input: UpdateApiKeyInput): Promise<ProjectApiKey> {
     const existing = await this.get(projectId, keyId);
     if (!existing) {
-      throw Object.assign(new Error(`API key "${keyId}" not found`), {
-        code: "API_KEY_NOT_FOUND",
-        statusCode: 404,
-      });
+      throw notFound("API key", keyId, "API_KEY_NOT_FOUND");
     }
     const name = input.name ?? existing.name;
     const scopes = input.scopes ? JSON.stringify(input.scopes) : JSON.stringify(existing.scopes);
