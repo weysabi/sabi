@@ -70,6 +70,37 @@ const server = await createServer(sabi, {
 });
 ```
 
+## Control-plane store
+
+The server package includes a project-scoped SQLite control-plane store for local development and
+single-instance self-hosting:
+
+```ts
+import { createSqliteControlPlaneStore } from "@weysabi/server";
+
+const control = createSqliteControlPlaneStore(".sabi/control.db");
+const project = await control.projects.create({
+  name: "Support",
+  slug: "support",
+});
+
+const createdKey = await control.apiKeys.create({
+  projectId: project.id,
+  name: "runtime",
+  scopes: ["chat:write"],
+});
+
+console.log(createdKey.secret); // returned only at creation
+await control.close();
+```
+
+The store persists only an Argon2id hash and SHA-256 fingerprint for project API keys. Project
+deletion cascades to managed child resources. Prompt version allocation and publishing use SQLite
+transactions.
+
+Control-plane databases use versioned migrations. Databases created by the earlier preview schema
+must be backed up and recreated rather than being opened with the hardened store.
+
 Injected stores remain caller-owned and are not disposed by `server.stop()`.
 
 ## Deployment

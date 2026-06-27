@@ -26,6 +26,10 @@ import { InMemoryTokenQuotaStore, fingerprintRequestApiKey } from "./quota";
 import type { QuotaReservation, TokenQuotaConfig, TokenQuotaStore } from "./quota";
 import { InMemoryUsageLedger } from "./ledger";
 import type { UsageLedger } from "./ledger";
+import { registerControlRoutes } from "./control/control-routes";
+import { createControlPlaneAuth } from "./control/auth";
+import { ControlError } from "./control/errors";
+import type { ControlPlaneStore } from "./control/store";
 
 export interface ServerOptions {
   port?: number;
@@ -47,6 +51,7 @@ export interface ServerOptions {
   rateLimitStore?: RateLimitStore;
   idempotencyStore?: IdempotencyStore;
   closeSabiOnStop?: boolean;
+  controlPlaneStore?: ControlPlaneStore;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,7 +120,7 @@ export async function createRouter(
       "/*",
       cors({
         origin: corsOrigins.includes("*") ? "*" : corsOrigins,
-        allowMethods: ["GET", "POST", "OPTIONS"],
+        allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "Authorization", "Idempotency-Key"],
         exposeHeaders: ["Content-Length"],
         maxAge: 86400,
@@ -126,11 +131,28 @@ export async function createRouter(
   }
 
   const apiKeys = resolveApiKeys(options.apiKey, options.apiKeys);
-  if (apiKeys.length > 0) {
-    app.use("/*", createAuth(apiKeys));
+  const authApiKeys =
+    apiKeys.length > 0 && options.adminApiKey
+      ? [{ key: options.adminApiKey, scopes: ["admin"] }, ...apiKeys]
+      : apiKeys;
+  const hasControlPlane = Boolean(options.controlPlaneStore && options.adminApiKey);
+  if (authApiKeys.length > 0) {
+    app.use("/*", createAuth(authApiKeys, { skipProjectRoutes: hasControlPlane }));
   }
   if (options.adminApiKey) {
     app.use("/v1/admin/*", createAdminAuth(options.adminApiKey, apiKeys));
+    if (options.controlPlaneStore) {
+      const controlAuth = createControlPlaneAuth(
+        options.adminApiKey,
+        apiKeys,
+        options.controlPlaneStore
+      );
+      app.use("/v1/projects", controlAuth);
+      app.use("/v1/projects/*", controlAuth);
+    } else {
+      app.use("/v1/projects", createAdminAuth(options.adminApiKey, apiKeys));
+      app.use("/v1/projects/*", createAdminAuth(options.adminApiKey, apiKeys));
+    }
   }
 
   const rpm = options.rateLimitRpm ?? 300;
@@ -149,6 +171,24 @@ export async function createRouter(
   const { bodyLimit } = await import("hono/body-limit");
   app.use(
     "/v1/chat/completions",
+    bodyLimit({
+      maxSize: maxBodyBytes,
+      onError: () => {
+        throw new PayloadTooLargeError(maxBodyBytes);
+      },
+    })
+  );
+  app.use(
+    "/v1/projects",
+    bodyLimit({
+      maxSize: maxBodyBytes,
+      onError: () => {
+        throw new PayloadTooLargeError(maxBodyBytes);
+      },
+    })
+  );
+  app.use(
+    "/v1/projects/*",
     bodyLimit({
       maxSize: maxBodyBytes,
       onError: () => {
@@ -232,6 +272,10 @@ export async function createRouter(
       });
       return ok(c, result);
     });
+  }
+
+  if (options.controlPlaneStore && options.adminApiKey) {
+    registerControlRoutes(app, sabi, options.controlPlaneStore, { idempotency: idemp });
   }
 
   app.post("/v1/chat/completions", async (c: HonoApp) => {
@@ -418,6 +462,16 @@ export async function createRouter(
 
     if (err instanceof z.ZodError) {
       return fail(c, 400, "Request validation failed", "VALIDATION_ERROR", err.issues);
+    }
+
+    if (err instanceof ControlError) {
+      log.warn("control error", {
+        code: err.code,
+        status: err.statusCode,
+        path: c.req.path,
+        method: c.req.method,
+      });
+      return fail(c, err.statusCode, err.message, err.code);
     }
 
     log.error("unhandled error", {
