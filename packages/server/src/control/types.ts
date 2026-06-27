@@ -311,6 +311,7 @@ export const CreateRunInputSchema = z.object({
 export type CreateRunInput = z.input<typeof CreateRunInputSchema>;
 
 export const UpdateRunInputSchema = z.object({
+  assistantMessageId: z.string().optional(),
   resolvedModel: z.string().optional(),
   provider: z.string().optional(),
   fallbackAttempts: z

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { createWeysabi, type CompleteRequest } from "@weysabi/sabi";
+import { createWeysabi, type CompleteRequest, type StreamRequest } from "@weysabi/sabi";
 import { createRouter } from "../routes";
 import { createSqliteControlPlaneStore } from "./sqlite-store";
 
@@ -16,6 +16,12 @@ function controlRequest(input: string, init: RequestInit = {}): Request {
   return new Request(input, { ...init, headers });
 }
 
+function projectRequest(input: string, token: string, init: RequestInit = {}): Request {
+  const headers = new Headers(init.headers);
+  headers.set("authorization", `Bearer ${token}`);
+  return new Request(input, { ...init, headers });
+}
+
 describe("Control plane HTTP routes", () => {
   let store: Store;
   let router: Router;
@@ -28,13 +34,30 @@ describe("Control plane HTTP routes", () => {
     completeRequests = [];
     sabi.complete = (async (request: CompleteRequest) => {
       completeRequests.push(request);
+      if (request.messages?.at(-1)?.content === "provider fails") {
+        throw new Error("provider unavailable");
+      }
       return {
         content: "ok",
         model: Array.isArray(request.model) ? request.model[0]! : request.model,
         provider: "test",
         latencyMs: 1,
+        usage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 },
       };
     }) as typeof sabi.complete;
+    sabi.stream = async function* (request: StreamRequest) {
+      const last = request.messages?.at(-1)?.content;
+      yield { content: "he", done: false };
+      if (last === "stream interrupts") {
+        throw new Error("stream lost");
+      }
+      yield { content: "llo", done: false };
+      yield {
+        content: "",
+        done: true,
+        usage: { promptTokens: 4, completionTokens: 2, totalTokens: 6 },
+      };
+    } as typeof sabi.stream;
     store = await createSqliteControlPlaneStore(":memory:");
     router = await createRouter(sabi, {
       adminApiKey: ADMIN_API_KEY,
@@ -634,6 +657,242 @@ describe("Control plane HTTP routes", () => {
       expect(updated.content).toBe("hello world");
       expect(updated.status).toBe("complete");
     });
+
+    it("sends a managed conversation message and records the run", async () => {
+      completeRequests = [];
+      const promptRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/prompts`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Support Agent", slug: "support-agent" }),
+        })
+      );
+      expect(promptRes.status).toBe(201);
+      const prompt = (await promptRes.json()) as Record<string, unknown>;
+
+      const versionRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/prompts/${prompt.id as string}/versions`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              messages: [{ role: "system", content: "You support {product}." }],
+              model: "test/model",
+            }),
+          }
+        )
+      );
+      expect(versionRes.status).toBe(201);
+      const version = (await versionRes.json()) as Record<string, unknown>;
+
+      const publishRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/prompts/${prompt.id as string}/versions/${version.id as string}/publish`,
+          { method: "POST" }
+        )
+      );
+      expect(publishRes.status).toBe(200);
+
+      const conversationRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/conversations`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ externalUserId: "managed-user", title: "Managed chat" }),
+        })
+      );
+      expect(conversationRes.status).toBe(201);
+      const conversation = (await conversationRes.json()) as Record<string, unknown>;
+
+      const sendRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages/send`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              content: "My invoice is wrong",
+              prompt: "support-agent",
+              promptInputs: { product: "Weysabi" },
+              externalUserId: "managed-user",
+              metadata: { ticketId: "ticket-1" },
+            }),
+          }
+        )
+      );
+      expect(sendRes.status).toBe(201);
+      const sent = (await sendRes.json()) as {
+        userMessage: Record<string, unknown>;
+        assistantMessage: Record<string, unknown>;
+        run: Record<string, unknown>;
+      };
+      expect(sent.userMessage.content).toBe("My invoice is wrong");
+      expect(sent.assistantMessage.content).toBe("ok");
+      expect(sent.run.status).toBe("success");
+      expect(sent.run.promptId).toBe(prompt.id);
+      expect(sent.run.promptVersionId).toBe(version.id);
+      expect(sent.run.totalTokens).toBe(5);
+
+      expect(completeRequests).toHaveLength(1);
+      expect(completeRequests[0]!.messages?.[0]?.content).toBe("You support Weysabi.");
+      expect(completeRequests[0]!.messages?.at(-1)?.content).toBe("My invoice is wrong");
+
+      const messagesRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages`
+        )
+      );
+      const messages = (await messagesRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(messages.items.map((item) => item.role)).toEqual(["user", "assistant"]);
+
+      const runsRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/runs?conversationId=${conversation.id as string}`
+        )
+      );
+      const runs = (await runsRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(runs.items).toHaveLength(1);
+      expect(runs.items[0]?.status).toBe("success");
+    });
+
+    it("records a failed run while preserving the user message", async () => {
+      const conversationRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/conversations`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ externalUserId: "failure-user", title: "Failure chat" }),
+        })
+      );
+      expect(conversationRes.status).toBe(201);
+      const conversation = (await conversationRes.json()) as Record<string, unknown>;
+
+      const sendRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages/send`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              content: "provider fails",
+              model: "test/model",
+            }),
+          }
+        )
+      );
+      expect(sendRes.status).toBe(500);
+
+      const messagesRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages`
+        )
+      );
+      const messages = (await messagesRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(messages.items).toHaveLength(1);
+      expect(messages.items[0]?.role).toBe("user");
+      expect(messages.items[0]?.content).toBe("provider fails");
+
+      const runsRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/runs?conversationId=${conversation.id as string}`
+        )
+      );
+      const runs = (await runsRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(runs.items).toHaveLength(1);
+      expect(runs.items[0]?.status).toBe("failed");
+      expect(runs.items[0]?.errorCode).toBe("RUN_FAILED");
+    });
+
+    it("streams a managed conversation message and completes the run", async () => {
+      const conversationRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/conversations`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Stream chat" }),
+        })
+      );
+      expect(conversationRes.status).toBe(201);
+      const conversation = (await conversationRes.json()) as Record<string, unknown>;
+
+      const streamRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages/stream`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ content: "stream hello", model: "test/model" }),
+          }
+        )
+      );
+      expect(streamRes.status).toBe(200);
+      expect(streamRes.headers.get("content-type")).toContain("text/event-stream");
+      const text = await streamRes.text();
+      expect(text).toContain('"type":"content.delta","content":"he"');
+      expect(text).toContain('"type":"message.completed"');
+      expect(text).toContain("data: [DONE]");
+
+      const messagesRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages`
+        )
+      );
+      const messages = (await messagesRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(messages.items.map((item) => item.content)).toEqual(["stream hello", "hello"]);
+      expect(messages.items[1]?.status).toBe("complete");
+
+      const runsRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/runs?conversationId=${conversation.id as string}`
+        )
+      );
+      const runs = (await runsRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(runs.items[0]?.status).toBe("success");
+      expect(runs.items[0]?.totalTokens).toBe(6);
+    });
+
+    it("records interrupted streamed assistant output", async () => {
+      const conversationRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/conversations`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Interrupted stream chat" }),
+        })
+      );
+      expect(conversationRes.status).toBe(201);
+      const conversation = (await conversationRes.json()) as Record<string, unknown>;
+
+      const streamRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages/stream`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ content: "stream interrupts", model: "test/model" }),
+          }
+        )
+      );
+      expect(streamRes.status).toBe(200);
+      const text = await streamRes.text();
+      expect(text).toContain('"type":"message.interrupted"');
+      expect(text).toContain('"code":"RUN_INTERRUPTED"');
+
+      const messagesRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages`
+        )
+      );
+      const messages = (await messagesRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(messages.items.map((item) => item.content)).toEqual(["stream interrupts", "he"]);
+      expect(messages.items[1]?.status).toBe("interrupted");
+
+      const runsRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/runs?conversationId=${conversation.id as string}`
+        )
+      );
+      const runs = (await runsRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(runs.items[0]?.status).toBe("interrupted");
+      expect(runs.items[0]?.errorCode).toBe("RUN_INTERRUPTED");
+    });
   });
 
   describe("Run routes", () => {
@@ -795,6 +1054,145 @@ describe("Control plane HTTP routes", () => {
         })
       );
       expect(deleteRes.status).toBe(200);
+    });
+  });
+
+  describe("Project API key authentication", () => {
+    async function createKey(scopes: string[]): Promise<string> {
+      const createRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/api-keys`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: `Scoped key ${Date.now()}`, scopes }),
+        })
+      );
+      expect(createRes.status).toBe(201);
+      const created = (await createRes.json()) as Record<string, unknown>;
+      return created.secret as string;
+    }
+
+    it("allows a scoped project key to send managed conversation messages", async () => {
+      const secret = await createKey(["chat:write", "conversations:read"]);
+      const conversationRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/conversations`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Project key chat" }),
+        })
+      );
+      expect(conversationRes.status).toBe(201);
+      const conversation = (await conversationRes.json()) as Record<string, unknown>;
+
+      completeRequests = [];
+      const sendRes = await router.fetch(
+        projectRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages/send`,
+          secret,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ content: "from project key", model: "test/model" }),
+          }
+        )
+      );
+      expect(sendRes.status).toBe(201);
+      const sent = (await sendRes.json()) as { assistantMessage: Record<string, unknown> };
+      expect(sent.assistantMessage.content).toBe("ok");
+      expect(completeRequests).toHaveLength(1);
+    });
+
+    it("rejects project keys outside their project or scope", async () => {
+      const secret = await createKey(["chat:write"]);
+      const otherProjectRes = await router.fetch(
+        controlRequest("http://localhost/v1/projects", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Other Project", slug: `other-project-${Date.now()}` }),
+        })
+      );
+      expect(otherProjectRes.status).toBe(201);
+      const otherProject = (await otherProjectRes.json()) as Record<string, unknown>;
+
+      const crossProjectRes = await router.fetch(
+        projectRequest(
+          `http://localhost/v1/projects/${otherProject.id as string}/conversations`,
+          secret
+        )
+      );
+      expect(crossProjectRes.status).toBe(403);
+
+      const promptRes = await router.fetch(
+        projectRequest(`http://localhost/v1/projects/${projectId}/prompts`, secret, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Blocked Prompt", slug: `blocked-${Date.now()}` }),
+        })
+      );
+      expect(promptRes.status).toBe(403);
+    });
+
+    it("idempotently retries managed message submission", async () => {
+      const secret = await createKey(["chat:write", "conversations:read"]);
+      const conversationRes = await router.fetch(
+        controlRequest(`http://localhost/v1/projects/${projectId}/conversations`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Idempotent project key chat" }),
+        })
+      );
+      expect(conversationRes.status).toBe(201);
+      const conversation = (await conversationRes.json()) as Record<string, unknown>;
+      const url = `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages/send`;
+      const body = { content: "retry this once", model: "test/model" };
+
+      completeRequests = [];
+      const firstRes = await router.fetch(
+        projectRequest(url, secret, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "idempotency-key": "managed-message-retry",
+          },
+          body: JSON.stringify(body),
+        })
+      );
+      expect(firstRes.status).toBe(201);
+      const first = (await firstRes.json()) as { run: Record<string, unknown> };
+
+      const secondRes = await router.fetch(
+        projectRequest(url, secret, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "idempotency-key": "managed-message-retry",
+          },
+          body: JSON.stringify(body),
+        })
+      );
+      expect(secondRes.status).toBe(200);
+      const second = (await secondRes.json()) as { run: Record<string, unknown> };
+      expect(second.run.id).toBe(first.run.id);
+      expect(completeRequests).toHaveLength(1);
+
+      const messagesRes = await router.fetch(
+        controlRequest(
+          `http://localhost/v1/projects/${projectId}/conversations/${conversation.id as string}/messages`
+        )
+      );
+      const messages = (await messagesRes.json()) as { items: Array<Record<string, unknown>> };
+      expect(messages.items).toHaveLength(2);
+
+      const conflictRes = await router.fetch(
+        projectRequest(url, secret, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "idempotency-key": "managed-message-retry",
+          },
+          body: JSON.stringify({ ...body, content: "different body" }),
+        })
+      );
+      expect(conflictRes.status).toBe(409);
     });
   });
 });

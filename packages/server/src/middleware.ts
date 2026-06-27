@@ -53,7 +53,11 @@ function getScopeForPath(method: string, path: string): string[] | null {
   return null;
 }
 
-export function createAuth(keys: ApiKeyEntry[]) {
+export interface AuthMiddlewareOptions {
+  skipProjectRoutes?: boolean;
+}
+
+export function createAuth(keys: ApiKeyEntry[], options: AuthMiddlewareOptions = {}) {
   const validator = createApiKeyValidator(keys);
   const authenticate = validator.authenticate();
 
@@ -64,6 +68,10 @@ export function createAuth(keys: ApiKeyEntry[]) {
       return;
     }
     if (c.req.path.startsWith("/v1/admin")) {
+      await next();
+      return;
+    }
+    if (options.skipProjectRoutes && c.req.path.startsWith("/v1/projects")) {
       await next();
       return;
     }

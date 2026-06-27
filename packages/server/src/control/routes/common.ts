@@ -1,5 +1,6 @@
 import type { Weysabi } from "@weysabi/sabi";
 import { ControlError, ControlResourceNotFoundError } from "../errors";
+import type { IdempotencyInstance } from "../../middleware";
 import type { createPromptService } from "../prompt-service";
 import type { createProjectService } from "../service";
 import type { ControlPlaneStore } from "../store";
@@ -13,6 +14,12 @@ export interface ControlRouteContext {
   store: ControlPlaneStore;
   projects: ReturnType<typeof createProjectService>;
   prompts: ReturnType<typeof createPromptService>;
+  idempotency?: IdempotencyInstance;
+}
+
+export async function sha256(value: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function parseJsonBody(c: HonoApp): Promise<Record<string, unknown>> {

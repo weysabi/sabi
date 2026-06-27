@@ -27,6 +27,7 @@ import type { QuotaReservation, TokenQuotaConfig, TokenQuotaStore } from "./quot
 import { InMemoryUsageLedger } from "./ledger";
 import type { UsageLedger } from "./ledger";
 import { registerControlRoutes } from "./control/control-routes";
+import { createControlPlaneAuth } from "./control/auth";
 import { ControlError } from "./control/errors";
 import type { ControlPlaneStore } from "./control/store";
 
@@ -134,13 +135,24 @@ export async function createRouter(
     apiKeys.length > 0 && options.adminApiKey
       ? [{ key: options.adminApiKey, scopes: ["admin"] }, ...apiKeys]
       : apiKeys;
+  const hasControlPlane = Boolean(options.controlPlaneStore && options.adminApiKey);
   if (authApiKeys.length > 0) {
-    app.use("/*", createAuth(authApiKeys));
+    app.use("/*", createAuth(authApiKeys, { skipProjectRoutes: hasControlPlane }));
   }
   if (options.adminApiKey) {
     app.use("/v1/admin/*", createAdminAuth(options.adminApiKey, apiKeys));
-    app.use("/v1/projects", createAdminAuth(options.adminApiKey, apiKeys));
-    app.use("/v1/projects/*", createAdminAuth(options.adminApiKey, apiKeys));
+    if (options.controlPlaneStore) {
+      const controlAuth = createControlPlaneAuth(
+        options.adminApiKey,
+        apiKeys,
+        options.controlPlaneStore
+      );
+      app.use("/v1/projects", controlAuth);
+      app.use("/v1/projects/*", controlAuth);
+    } else {
+      app.use("/v1/projects", createAdminAuth(options.adminApiKey, apiKeys));
+      app.use("/v1/projects/*", createAdminAuth(options.adminApiKey, apiKeys));
+    }
   }
 
   const rpm = options.rateLimitRpm ?? 300;
@@ -263,7 +275,7 @@ export async function createRouter(
   }
 
   if (options.controlPlaneStore && options.adminApiKey) {
-    registerControlRoutes(app, sabi, options.controlPlaneStore);
+    registerControlRoutes(app, sabi, options.controlPlaneStore, { idempotency: idemp });
   }
 
   app.post("/v1/chat/completions", async (c: HonoApp) => {

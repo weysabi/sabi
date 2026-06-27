@@ -924,6 +924,19 @@ class SqliteRunStore implements RunStore {
     if (!existing) {
       throw notFound("Run", runId, "RUN_NOT_FOUND");
     }
+    if (input.assistantMessageId) {
+      this.requireOwned(
+        "conversation_messages",
+        projectId,
+        input.assistantMessageId,
+        "Message",
+        "MESSAGE_NOT_FOUND"
+      );
+    }
+    const assistantMessageId =
+      input.assistantMessageId !== undefined
+        ? input.assistantMessageId
+        : existing.assistantMessageId;
     const resolvedModel =
       input.resolvedModel !== undefined ? input.resolvedModel : existing.resolvedModel;
     const provider = input.provider !== undefined ? input.provider : existing.provider;
@@ -947,8 +960,9 @@ class SqliteRunStore implements RunStore {
       : JSON.stringify(existing.metadata);
     const completedAt = input.completedAt !== undefined ? input.completedAt : existing.completedAt;
     this.db.run(
-      "UPDATE runs SET resolved_model = ?, provider = ?, fallback_attempts = ?, prompt_tokens = ?, completion_tokens = ?, total_tokens = ?, estimated_cost_usd = ?, latency_ms = ?, status = ?, error_code = ?, error_message = ?, metadata = ?, completed_at = ? WHERE id = ? AND project_id = ?",
+      "UPDATE runs SET assistant_message_id = ?, resolved_model = ?, provider = ?, fallback_attempts = ?, prompt_tokens = ?, completion_tokens = ?, total_tokens = ?, estimated_cost_usd = ?, latency_ms = ?, status = ?, error_code = ?, error_message = ?, metadata = ?, completed_at = ? WHERE id = ? AND project_id = ?",
       [
+        assistantMessageId ?? null,
         resolvedModel ?? null,
         provider ?? null,
         fallbackAttempts,
