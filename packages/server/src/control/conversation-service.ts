@@ -1,8 +1,10 @@
 import { z } from "zod";
-import type { CompleteRequest, StreamRequest, Weysabi } from "@weysabi/sabi";
+import type { CompleteRequest, Message, StreamRequest, Weysabi } from "@weysabi/sabi";
 import { assembleConversationContext } from "./context";
 import { ControlError } from "./errors";
 import type { ControlPlaneStore } from "./store";
+import type { QuotaReservation, TokenQuotaConfig, TokenQuotaStore } from "../quota";
+import type { RagService } from "./rag-service";
 import type {
   Conversation,
   ConversationMessage,
@@ -10,6 +12,7 @@ import type {
   Project,
   PromptVersion,
   Run,
+  RunAttempt,
 } from "./types";
 
 export const SendConversationMessageInputSchema = z.object({
@@ -26,6 +29,7 @@ export const SendConversationMessageInputSchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().positive().optional(),
   metadata: z.record(z.string(), z.unknown()).default({}),
+  documentIds: z.array(z.string()).default([]),
 });
 
 export type SendConversationMessageInput = z.input<typeof SendConversationMessageInputSchema>;
@@ -58,6 +62,14 @@ function modelToString(model: string | string[]): string {
 
 function publicErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function estimateContextTokens(context: Message[], maxTokens?: number): number {
+  const charCount = context.reduce(
+    (sum, m) => sum + (typeof m.content === "string" ? m.content.length : 0),
+    0
+  );
+  return Math.max(1, Math.ceil(charCount / 4)) + (maxTokens ?? 1024);
 }
 
 async function resolvePrompt(
@@ -111,99 +123,183 @@ async function resolvePrompt(
   return { prompt, version };
 }
 
-export function createConversationService(sabi: Weysabi, store: ControlPlaneStore) {
+interface ConversationPreparation {
+  parsed: SendConversationMessageInput;
+  project: Project;
+  conversation: Conversation;
+  prompt?: ManagedPrompt;
+  version?: PromptVersion;
+  model: string | string[];
+  userMessage: ConversationMessage;
+  context: Message[];
+  run: Run;
+}
+
+async function prepareConversationMessage(
+  store: ControlPlaneStore,
+  input: SendConversationMessageInput,
+  runStatus: "pending" | "streaming"
+): Promise<ConversationPreparation> {
+  const parsed = SendConversationMessageInputSchema.parse(input);
+  const project = await store.projects.get(parsed.projectId);
+  if (!project) {
+    throw new ControlError(`Project "${parsed.projectId}" not found`, "PROJECT_NOT_FOUND", 404);
+  }
+
+  const conversation = await store.conversations.getConversation(
+    parsed.projectId,
+    parsed.conversationId
+  );
+  if (!conversation) {
+    throw new ControlError(
+      `Conversation "${parsed.conversationId}" not found`,
+      "CONVERSATION_NOT_FOUND",
+      404
+    );
+  }
+  if (
+    parsed.externalUserId &&
+    conversation.externalUserId &&
+    parsed.externalUserId !== conversation.externalUserId
+  ) {
+    throw new ControlError(
+      `Conversation "${parsed.conversationId}" does not belong to external user "${parsed.externalUserId}"`,
+      "CONVERSATION_CONFLICT",
+      409
+    );
+  }
+
+  const { prompt, version } = await resolvePrompt(
+    store,
+    parsed.projectId,
+    parsed.prompt,
+    parsed.promptVersion ?? parsed.promptVersionId
+  );
+  const model = parsed.model ?? version?.model ?? project.settings.defaultModel;
+  if (!model) {
+    throw new ControlError(
+      "A model is required. Configure project settings, prompt version model, or provide model in the request.",
+      "CONVERSATION_MODEL_REQUIRED",
+      400
+    );
+  }
+
+  const userMessage = await store.conversations.appendMessage({
+    projectId: parsed.projectId,
+    conversationId: parsed.conversationId,
+    role: "user",
+    content: parsed.content,
+    status: "complete",
+    metadata: parsed.metadata,
+  });
+
+  const messages = await store.conversations.listMessages(parsed.projectId, parsed.conversationId, {
+    limit: 100,
+    offset: 0,
+  });
+  const context = assembleConversationContext({
+    project: project as Project,
+    conversation,
+    promptVersion: version,
+    messages: messages.items,
+    userMessage,
+    promptInputs: parsed.promptInputs,
+  });
+
+  const run = await store.runs.create({
+    projectId: parsed.projectId,
+    conversationId: parsed.conversationId,
+    userMessageId: userMessage.id,
+    promptId: prompt?.id,
+    promptVersionId: version?.id,
+    requestedModel: modelToString(model),
+    status: runStatus,
+    documentIds: parsed.documentIds,
+    metadata: parsed.metadata,
+  });
+
+  return { parsed, project, conversation, prompt, version, model, userMessage, context, run };
+}
+
+async function injectRagContext(
+  ragService: RagService | undefined,
+  projectId: string,
+  context: Message[],
+  documentIds: string[],
+  userContent: string
+): Promise<void> {
+  if (!ragService || documentIds.length === 0) return;
+  const engine = ragService.project(projectId);
+  const results = await engine.query(userContent, 5);
+  if (results.length === 0) return;
+  const ragContent = results
+    .map((r) => `[Source: ${r.filePath} (score: ${r.score.toFixed(3)})]\n${r.content}`)
+    .join("\n\n");
+  context.unshift({
+    role: "system",
+    content: `Relevant context from project documents:\n\n${ragContent}`,
+  });
+}
+
+export function createConversationService(
+  sabi: Weysabi,
+  store: ControlPlaneStore,
+  quota?: { store: TokenQuotaStore; config?: TokenQuotaConfig },
+  ragService?: RagService
+) {
   return {
     async sendMessage(input: SendConversationMessageInput): Promise<SendConversationMessageResult> {
-      const parsed = SendConversationMessageInputSchema.parse(input);
-      const project = await store.projects.get(parsed.projectId);
-      if (!project) {
-        throw new ControlError(`Project "${parsed.projectId}" not found`, "PROJECT_NOT_FOUND", 404);
-      }
-
-      const conversation = await store.conversations.getConversation(
+      const { parsed, version, conversation, userMessage, model, context, run } =
+        await prepareConversationMessage(store, input, "pending");
+      await injectRagContext(
+        ragService,
         parsed.projectId,
-        parsed.conversationId
+        context,
+        parsed.documentIds ?? [],
+        parsed.content
       );
-      if (!conversation) {
-        throw new ControlError(
-          `Conversation "${parsed.conversationId}" not found`,
-          "CONVERSATION_NOT_FOUND",
-          404
-        );
-      }
-      if (
-        parsed.externalUserId &&
-        conversation.externalUserId &&
-        parsed.externalUserId !== conversation.externalUserId
-      ) {
-        throw new ControlError(
-          `Conversation "${parsed.conversationId}" does not belong to external user "${parsed.externalUserId}"`,
-          "CONVERSATION_CONFLICT",
-          409
-        );
-      }
-
-      const { prompt, version } = await resolvePrompt(
-        store,
-        parsed.projectId,
-        parsed.prompt,
-        parsed.promptVersion ?? parsed.promptVersionId
-      );
-      const model = parsed.model ?? version?.model ?? project.settings.defaultModel;
-      if (!model) {
-        throw new ControlError(
-          "A model is required. Configure project settings, prompt version model, or provide model in the request.",
-          "CONVERSATION_MODEL_REQUIRED",
-          400
-        );
-      }
-
-      const userMessage = await store.conversations.appendMessage({
-        projectId: parsed.projectId,
-        conversationId: parsed.conversationId,
-        role: "user",
-        content: parsed.content,
-        status: "complete",
-        metadata: parsed.metadata,
-      });
-
-      const messages = await store.conversations.listMessages(
-        parsed.projectId,
-        parsed.conversationId,
-        {
-          limit: 100,
-          offset: 0,
-        }
-      );
-      const context = assembleConversationContext({
-        project: project as Project,
-        conversation,
-        promptVersion: version,
-        messages: messages.items,
-        userMessage,
-        promptInputs: parsed.promptInputs,
-      });
+      const fallbackAttempts: RunAttempt[] = [];
       const request: CompleteRequest = {
         model,
         messages: context,
         fallbacks: parsed.fallbacks ?? version?.fallbacks,
         temperature: parsed.temperature ?? version?.temperature,
         maxTokens: parsed.maxTokens ?? version?.maxTokens,
+        telemetry: {
+          onFallback(metadata) {
+            fallbackAttempts.push({
+              model: metadata.from,
+              provider: metadata.from.split("/")[0] ?? "unknown",
+              error: metadata.error,
+            });
+          },
+        },
       };
 
-      const run = await store.runs.create({
-        projectId: parsed.projectId,
-        conversationId: parsed.conversationId,
-        userMessageId: userMessage.id,
-        promptId: prompt?.id,
-        promptVersionId: version?.id,
-        requestedModel: modelToString(model),
-        status: "pending",
-        metadata: parsed.metadata,
-      });
+      let quotaReservation: QuotaReservation | undefined;
+      const qt = quota;
+      if (qt) {
+        const estimatedTokens = estimateContextTokens(context, request.maxTokens);
+        const result = await qt.store.reserve(parsed.projectId, estimatedTokens, qt.config ?? {});
+        if (!result.allowed) {
+          throw new ControlError(`Quota exceeded: ${result.reason}`, "QUOTA_EXCEEDED", 429);
+        }
+        quotaReservation = result.reservation;
+      }
 
       try {
         const response = await sabi.complete(request);
+        if (quotaReservation && qt) {
+          await qt.store.commit(
+            quotaReservation.id,
+            response.usage?.totalTokens ?? quotaReservation.reservedTokens
+          );
+        }
+        fallbackAttempts.push({
+          model: response.model,
+          provider: response.provider,
+          latencyMs: response.latencyMs,
+        });
         const assistantMessage = await store.conversations.appendMessage({
           projectId: parsed.projectId,
           conversationId: parsed.conversationId,
@@ -221,13 +317,7 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
           assistantMessageId: assistantMessage.id,
           resolvedModel: response.model,
           provider: response.provider,
-          fallbackAttempts: [
-            {
-              model: response.model,
-              provider: response.provider,
-              latencyMs: response.latencyMs,
-            },
-          ],
+          fallbackAttempts,
           promptTokens: response.usage?.promptTokens,
           completionTokens: response.usage?.completionTokens,
           totalTokens: response.usage?.totalTokens,
@@ -245,6 +335,9 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
           content: response.content,
         };
       } catch (error) {
+        if (quotaReservation && qt) {
+          await qt.store.release(quotaReservation.id);
+        }
         await store.runs.update(parsed.projectId, run.id, {
           status: "failed",
           errorCode: "RUN_FAILED",
@@ -256,94 +349,48 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
     },
 
     async *streamMessage(input: SendConversationMessageInput): AsyncIterable<ConversationEvent> {
-      const parsed = SendConversationMessageInputSchema.parse(input);
-      const project = await store.projects.get(parsed.projectId);
-      if (!project) {
-        throw new ControlError(`Project "${parsed.projectId}" not found`, "PROJECT_NOT_FOUND", 404);
-      }
-
-      const conversation = await store.conversations.getConversation(
+      const { parsed, version, userMessage, model, context, run } =
+        await prepareConversationMessage(store, input, "streaming");
+      await injectRagContext(
+        ragService,
         parsed.projectId,
-        parsed.conversationId
+        context,
+        parsed.documentIds ?? [],
+        parsed.content
       );
-      if (!conversation) {
-        throw new ControlError(
-          `Conversation "${parsed.conversationId}" not found`,
-          "CONVERSATION_NOT_FOUND",
-          404
-        );
-      }
-      if (
-        parsed.externalUserId &&
-        conversation.externalUserId &&
-        parsed.externalUserId !== conversation.externalUserId
-      ) {
-        throw new ControlError(
-          `Conversation "${parsed.conversationId}" does not belong to external user "${parsed.externalUserId}"`,
-          "CONVERSATION_CONFLICT",
-          409
-        );
-      }
-
-      const { prompt, version } = await resolvePrompt(
-        store,
-        parsed.projectId,
-        parsed.prompt,
-        parsed.promptVersion ?? parsed.promptVersionId
-      );
-      const model = parsed.model ?? version?.model ?? project.settings.defaultModel;
-      if (!model) {
-        throw new ControlError(
-          "A model is required. Configure project settings, prompt version model, or provide model in the request.",
-          "CONVERSATION_MODEL_REQUIRED",
-          400
-        );
-      }
-
-      const userMessage = await store.conversations.appendMessage({
-        projectId: parsed.projectId,
-        conversationId: parsed.conversationId,
-        role: "user",
-        content: parsed.content,
-        status: "complete",
-        metadata: parsed.metadata,
-      });
-
-      const messages = await store.conversations.listMessages(
-        parsed.projectId,
-        parsed.conversationId,
-        {
-          limit: 100,
-          offset: 0,
-        }
-      );
-      const context = assembleConversationContext({
-        project: project as Project,
-        conversation,
-        promptVersion: version,
-        messages: messages.items,
-        userMessage,
-        promptInputs: parsed.promptInputs,
-      });
+      yield { type: "message.created", message: userMessage, run };
+      const fallbackAttempts: RunAttempt[] = [];
       const request: StreamRequest = {
         model,
         messages: context,
         fallbacks: parsed.fallbacks ?? version?.fallbacks,
         temperature: parsed.temperature ?? version?.temperature,
         maxTokens: parsed.maxTokens ?? version?.maxTokens,
+        telemetry: {
+          onFallback(metadata) {
+            fallbackAttempts.push({
+              model: metadata.from,
+              provider: metadata.from.split("/")[0] ?? "unknown",
+              error: metadata.error,
+            });
+          },
+        },
       };
 
-      const run = await store.runs.create({
-        projectId: parsed.projectId,
-        conversationId: parsed.conversationId,
-        userMessageId: userMessage.id,
-        promptId: prompt?.id,
-        promptVersionId: version?.id,
-        requestedModel: modelToString(model),
-        status: "streaming",
-        metadata: parsed.metadata,
-      });
-      yield { type: "message.created", message: userMessage, run };
+      let quotaReservation: QuotaReservation | undefined;
+      const qt = quota;
+      if (qt) {
+        const estimatedTokens = estimateContextTokens(context, request.maxTokens);
+        const result = await qt.store.reserve(parsed.projectId, estimatedTokens, qt.config ?? {});
+        if (!result.allowed) {
+          yield {
+            type: "error",
+            error: { code: "QUOTA_EXCEEDED", message: result.reason },
+          };
+          return;
+        }
+        quotaReservation = result.reservation;
+      }
 
       let content = "";
       let usage: ConversationUsage | undefined;
@@ -360,6 +407,12 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
           }
         }
 
+        if (quotaReservation && qt) {
+          await qt.store.commit(
+            quotaReservation.id,
+            usage?.totalTokens ?? quotaReservation.reservedTokens
+          );
+        }
         const assistantMessage = await store.conversations.appendMessage({
           projectId: parsed.projectId,
           conversationId: parsed.conversationId,
@@ -371,6 +424,7 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
         });
         const completedRun = await store.runs.update(parsed.projectId, run.id, {
           assistantMessageId: assistantMessage.id,
+          fallbackAttempts,
           promptTokens: usage?.promptTokens,
           completionTokens: usage?.completionTokens,
           totalTokens: usage?.totalTokens,
@@ -380,6 +434,9 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
         });
         yield { type: "message.completed", message: assistantMessage, run: completedRun };
       } catch (error) {
+        if (quotaReservation && qt) {
+          await qt.store.release(quotaReservation.id);
+        }
         const message = publicErrorMessage(error);
         if (content) {
           const assistantMessage = await store.conversations.appendMessage({
@@ -393,6 +450,7 @@ export function createConversationService(sabi: Weysabi, store: ControlPlaneStor
           });
           const interruptedRun = await store.runs.update(parsed.projectId, run.id, {
             assistantMessageId: assistantMessage.id,
+            fallbackAttempts,
             promptTokens: usage?.promptTokens,
             completionTokens: usage?.completionTokens,
             totalTokens: usage?.totalTokens,
