@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
+import packageJson from "../../../package.json" with { type: "json" };
 
 const TEMPLATES = ["server", "nextjs", "tanstack", "agent"] as const;
 
@@ -16,15 +17,22 @@ export interface CreateProjectOptions {
   install?: boolean;
 }
 
-interface TemplateFile {
+export interface TemplateFile {
   path: string;
   content: string;
 }
 
-interface ProjectTemplate {
+export interface ProjectTemplate {
   files: TemplateFile[];
   nextSteps: string[];
 }
+
+export const TEMPLATE_OWNED_FILES: Record<CreateTemplate, string[]> = {
+  server: ["package.json", "tsconfig.json", "src/index.ts", ".env.example", ".gitignore", "README.md", ".sabi-template.json"],
+  nextjs: ["package.json", "tsconfig.json", "next.config.ts", "app/layout.tsx", "app/page.tsx", "app/api/chat/route.ts", "app/styles.css", ".env.example", ".gitignore", "README.md", ".sabi-template.json"],
+  tanstack: ["package.json", "tsconfig.json", "vite.config.ts", "index.html", "src/main.tsx", "src/routeTree.gen.ts", "src/routes/__root.tsx", "src/routes/index.tsx", "src/api/server.ts", ".env.example", ".gitignore", "README.md", ".sabi-template.json"],
+  agent: ["package.json", "tsconfig.json", "src/index.ts", ".env.example", ".gitignore", "README.md", ".sabi-template.json"],
+};
 
 function isCreateTemplate(value: string): value is CreateTemplate {
   return TEMPLATES.includes(value as CreateTemplate);
@@ -168,6 +176,10 @@ Then call:
 
 Provider secrets and admin keys must stay server-side.
 `,
+      },
+      {
+        path: ".sabi-template.json",
+        content: `${JSON.stringify({ template: "server", version: packageJson.version }, null, 2)}\n`,
       },
     ],
     nextSteps: [
@@ -548,6 +560,10 @@ Open [http://localhost:3000](http://localhost:3000).
 The browser calls \`/api/chat\`; Sabi and provider credentials run server-side only.
 `,
       },
+      {
+        path: ".sabi-template.json",
+        content: `${JSON.stringify({ template: "nextjs", version: packageJson.version }, null, 2)}\n`,
+      },
     ],
     nextSteps: [
       `cd ${projectName}`,
@@ -861,6 +877,10 @@ Opens Vite dev server on [http://localhost:5173](http://localhost:5173).
 The browser calls \`/api/chat\`; Sabi and provider credentials run server-side only.
 `,
       },
+      {
+        path: ".sabi-template.json",
+        content: `${JSON.stringify({ template: "tanstack", version: packageJson.version }, null, 2)}\n`,
+      },
     ],
     nextSteps: [
       `cd ${projectName}`,
@@ -995,6 +1015,10 @@ bun run dev
 Starts a server and seeds a project + prompt version automatically.
 `,
       },
+      {
+        path: ".sabi-template.json",
+        content: `${JSON.stringify({ template: "agent", version: packageJson.version }, null, 2)}\n`,
+      },
     ],
     nextSteps: [
       `cd ${projectName}`,
@@ -1006,7 +1030,7 @@ Starts a server and seeds a project + prompt version automatically.
   };
 }
 
-function getProjectTemplate(template: CreateTemplate, projectName: string): ProjectTemplate {
+export function getProjectTemplate(template: CreateTemplate, projectName: string): ProjectTemplate {
   if (template === "server") return serverTemplate(projectName);
   if (template === "nextjs") return nextjsTemplate(projectName);
   if (template === "tanstack") return tanstackTemplate(projectName);
