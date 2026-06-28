@@ -21,12 +21,16 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const [projectName, setProjectName] = useState("");
 
   useEffect(() => {
-    apiFetch(`/v1/projects/${projectId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((p) => {
-        if (p) setProjectName((p as { name: string }).name);
-      })
-      .catch(() => {});
+    let cancelled = false;
+    (async () => {
+      const res = await apiFetch(`/v1/projects/${projectId}`);
+      if (!res.ok || cancelled) return;
+      const p = (await res.json()) as { name: string };
+      if (!cancelled) setProjectName(p.name);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, apiFetch]);
 
   const base = `/admin/projects/${projectId}`;

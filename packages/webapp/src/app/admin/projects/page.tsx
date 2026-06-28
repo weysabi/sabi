@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, FolderKanban, ExternalLink } from "lucide-react";
-import { useAdmin, slugFromName } from "@/lib/admin";
+import { useAdmin, slugFromName, errorMessage } from "@/lib/admin";
 
 export default function ProjectsPage() {
   const { projects, loading, error, refreshProjects, apiFetch, connected } = useAdmin();
@@ -43,7 +43,7 @@ export default function ProjectsPage() {
       await refreshProjects();
       router.push(`/admin/projects/${project.id}`);
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create project");
+      setCreateError(errorMessage(err, "Failed to create project"));
     } finally {
       setCreating(false);
     }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { MessageSquare, Plus, ExternalLink, Eye } from "lucide-react";
-import { useAdmin, slugFromName } from "@/lib/admin";
+import { useAdmin, slugFromName, errorMessage } from "@/lib/admin";
 
 interface Prompt {
   id: string;
@@ -67,7 +67,7 @@ export default function PromptsPage() {
       setCreateSlug("");
       await loadPrompts();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create prompt");
+      setCreateError(errorMessage(err, "Failed to create prompt"));
     }
   }
 

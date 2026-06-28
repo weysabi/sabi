@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { KeyRound, Plus, Trash2, Copy, Check } from "lucide-react";
-import { useAdmin } from "@/lib/admin";
+import { useAdmin, errorMessage } from "@/lib/admin";
 
 interface ApiKey {
   id: string;
@@ -66,7 +66,7 @@ export default function ApiKeysPage() {
       setCreateName("");
       await loadKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create API key");
+      setError(errorMessage(err, "Failed to create API key"));
     }
   }
 
@@ -80,7 +80,7 @@ export default function ApiKeysPage() {
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       await loadKeys();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke");
+      setError(errorMessage(err, "Failed to revoke"));
     }
   }
 

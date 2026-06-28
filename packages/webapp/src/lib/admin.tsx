@@ -74,7 +74,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       const data = (await res.json()) as { items: Project[]; total: number };
       setProjects(data.items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects");
+      setError(errorMessage(err, "Failed to load projects"));
     } finally {
       setLoading(false);
     }
@@ -117,6 +117,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       {children}
     </AdminContext.Provider>
   );
+}
+
+export function errorMessage(err: unknown, fallback = "An unexpected error occurred"): string {
+  return err instanceof Error ? err.message : fallback;
 }
 
 export function slugFromName(name: string): string {

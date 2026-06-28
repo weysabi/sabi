@@ -11,7 +11,7 @@ import {
   KeyRound,
   Plug,
 } from "lucide-react";
-import { useAdmin } from "@/lib/admin";
+import { useAdmin, errorMessage } from "@/lib/admin";
 
 interface Stats {
   totalRequests: number;
@@ -52,23 +52,25 @@ export default function AdminDashboard() {
 
     try {
       const [statsRes, usageRes] = await Promise.all([
-        apiFetch("/v1/admin/stats").then((r) => {
+        (async () => {
+          const r = await apiFetch("/v1/admin/stats");
           if (!r.ok) throw new Error(`Stats: ${r.status}`);
           return r.json() as Promise<Stats>;
-        }),
-        apiFetch("/v1/admin/usage").then((r) => {
+        })(),
+        (async () => {
+          const r = await apiFetch("/v1/admin/usage");
           if (!r.ok) throw new Error(`Usage: ${r.status}`);
           return r.json() as Promise<{
             records: UsageRecord[];
             total: number;
           }>;
-        }),
+        })(),
       ]);
 
       setStats(statsRes);
       setUsage(usageRes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection failed");
+      setError(errorMessage(err, "Connection failed"));
       setStats(null);
       setUsage(null);
     } finally {

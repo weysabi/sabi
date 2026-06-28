@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { MessageSquare, Plus, Eye, RotateCcw, CheckCircle2 } from "lucide-react";
-import { useAdmin } from "@/lib/admin";
+import { useAdmin, errorMessage } from "@/lib/admin";
 
 interface Prompt {
   id: string;
@@ -81,7 +81,7 @@ export default function PromptDetailPage() {
       setNewMessages([{ role: "system", content: "" }]);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create version");
+      setError(errorMessage(err, "Failed to create version"));
     }
   }
 
@@ -95,7 +95,7 @@ export default function PromptDetailPage() {
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to publish");
+      setError(errorMessage(err, "Failed to publish"));
     }
   }
 

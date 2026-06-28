@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { FileText, Plus, Trash2 } from "lucide-react";
-import { useAdmin } from "@/lib/admin";
+import { useAdmin, errorMessage } from "@/lib/admin";
 
 interface Document {
   id: string;
@@ -65,7 +65,7 @@ export default function DocumentsPage() {
       setCreateContent("");
       await loadDocuments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create document");
+      setError(errorMessage(err, "Failed to create document"));
     }
   }
 
@@ -79,7 +79,7 @@ export default function DocumentsPage() {
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       await loadDocuments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete");
+      setError(errorMessage(err, "Failed to delete"));
     }
   }
 

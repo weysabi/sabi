@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Settings, Save } from "lucide-react";
-import { useAdmin } from "@/lib/admin";
+import { useAdmin, errorMessage } from "@/lib/admin";
 
 export default function ProjectOverviewPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -22,24 +22,28 @@ export default function ProjectOverviewPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch(`/v1/projects/${projectId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((p) => {
-        if (p) {
-          const proj = p as {
-            name: string;
-            slug: string;
-            settings: { retentionDays?: number; defaultModel?: string };
-            createdAt: number;
-          };
-          setProject(proj);
-          setRetentionDays(String(proj.settings?.retentionDays ?? ""));
-          setDefaultModel(proj.settings?.defaultModel ?? "");
-        } else {
-          setFetchError(true);
-        }
-      })
-      .catch(() => setFetchError(true));
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`/v1/projects/${projectId}`);
+        if (!res.ok) throw new Error();
+        const proj = (await res.json()) as {
+          name: string;
+          slug: string;
+          settings: { retentionDays?: number; defaultModel?: string };
+          createdAt: number;
+        };
+        if (cancelled) return;
+        setProject(proj);
+        setRetentionDays(String(proj.settings?.retentionDays ?? ""));
+        setDefaultModel(proj.settings?.defaultModel ?? "");
+      } catch {
+        if (!cancelled) setFetchError(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, apiFetch]);
 
   async function handleSave() {
@@ -57,7 +61,7 @@ export default function ProjectOverviewPage() {
       });
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Save failed");
+      setSaveError(errorMessage(err, "Save failed"));
     } finally {
       setSaving(false);
     }
