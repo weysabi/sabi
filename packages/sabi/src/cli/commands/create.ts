@@ -92,18 +92,13 @@ function serverTemplate(projectName: string): ProjectTemplate {
       },
       {
         path: "src/index.ts",
-        content: `import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { createWeysabi } from "@weysabi/sabi";
-import { createServer, createSqliteControlPlaneStore } from "@weysabi/server";
+        content: `import { createWeysabi } from "@weysabi/sabi";
+import { createServer } from "@weysabi/server";
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 if (!openaiApiKey) {
   throw new Error("OPENAI_API_KEY is required. Copy .env.example to .env and set it.");
 }
-
-const controlDbPath = process.env.SABI_CONTROL_DB ?? ".sabi/control.db";
-mkdirSync(dirname(controlDbPath), { recursive: true });
 
 const sabi = createWeysabi(
   {
@@ -119,7 +114,7 @@ const sabi = createWeysabi(
 const server = await createServer(sabi, {
   apiKey: process.env.SABI_API_KEY,
   adminApiKey: process.env.SABI_ADMIN_API_KEY,
-  controlPlaneStore: createSqliteControlPlaneStore(controlDbPath),
+  controlPlane: true,
 });
 
 console.log(\`Sabi server listening on http://\${server.hostname}:\${server.port}\`);
@@ -930,7 +925,7 @@ function agentTemplate(projectName: string): ProjectTemplate {
       {
         path: "src/index.ts",
         content: `import { createWeysabi } from "@weysabi/sabi";
-import { createServer, createSqliteControlPlaneStore } from "@weysabi/server";
+import { createServer } from "@weysabi/server";
 
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) throw new Error("OPENAI_API_KEY is required. See .env.example.");
@@ -943,7 +938,7 @@ const sabi = createWeysabi(
 const server = await createServer(sabi, {
   apiKey: process.env.SABI_API_KEY,
   adminApiKey: process.env.SABI_ADMIN_API_KEY,
-  controlPlaneStore: createSqliteControlPlaneStore(".sabi/control.db"),
+  controlPlane: true,
 });
 
 // Seed a project and prompt version via control plane
