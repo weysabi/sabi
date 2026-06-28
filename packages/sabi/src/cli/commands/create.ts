@@ -70,8 +70,8 @@ function serverTemplate(projectName: string): ProjectTemplate {
               typecheck: "bunx tsc --noEmit",
             },
             dependencies: {
-              "@weysabi/sabi": "^0.9.0",
-              "@weysabi/server": "^0.9.0",
+              "@weysabi/sabi": "^0.10.0",
+              "@weysabi/server": "^0.10.0",
             },
             devDependencies: {
               "@types/bun": "latest",
@@ -212,7 +212,7 @@ function nextjsTemplate(projectName: string): ProjectTemplate {
               typecheck: "tsc --noEmit",
             },
             dependencies: {
-              "@weysabi/sabi": "^0.9.0",
+              "@weysabi/sabi": "^0.10.0",
               next: "^15",
               react: "^19",
               "react-dom": "^19",
@@ -595,7 +595,7 @@ function tanstackTemplate(projectName: string): ProjectTemplate {
             },
             dependencies: {
               "@tanstack/react-router": "^1",
-              "@weysabi/sabi": "^0.9.0",
+              "@weysabi/sabi": "^0.10.0",
               react: "^19",
               "react-dom": "^19",
             },
@@ -911,8 +911,8 @@ function agentTemplate(projectName: string): ProjectTemplate {
               typecheck: "bunx tsc --noEmit",
             },
             dependencies: {
-              "@weysabi/sabi": "^0.9.0",
-              "@weysabi/server": "^0.9.0",
+              "@weysabi/sabi": "^0.10.0",
+              "@weysabi/server": "^0.10.0",
             },
             devDependencies: {
               "@types/bun": "latest",

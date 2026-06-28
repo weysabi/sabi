@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import { createSabiProject } from "./create";
 import { upgradeCommand } from "./upgrade";

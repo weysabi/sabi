@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
-import type { CreateTemplate, TemplateFile } from "./create";
+import type { CreateTemplate } from "./create";
 import { getProjectTemplate, TEMPLATE_OWNED_FILES } from "./create";
 
 interface SabiTemplateMarker {
@@ -40,7 +40,7 @@ export async function upgradeCommand(projectName?: string): Promise<void> {
   const ownedSet = new Set(owned);
 
   let updated = 0;
-  let skipped = 0;
+  const skipped = 0;
 
   for (const file of template.files) {
     if (!ownedSet.has(file.path)) continue;
