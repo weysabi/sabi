@@ -88,6 +88,11 @@
       "types": "./src/prompts/index.ts",
       "import": "./src/prompts/index.ts",
       "default": "./src/prompts/index.ts"
+    },
+    "./cli": {
+      "types": "./src/cli/public.ts",
+      "import": "./src/cli/public.ts",
+      "default": "./src/cli/public.ts"
     }
   },
   "files": [
