@@ -1,9 +1,8 @@
 import type { Context } from "hono";
 import type { ServerError } from "./errors";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function json<T>(c: Context, data: T, init?: number | ResponseInit) {
-  return c.json(data, init as any);
+  return c.json(data, init as Parameters<typeof c.json>[1]);
 }
 
 export function ok<T>(c: Context, data: T, status: number = 200) {
