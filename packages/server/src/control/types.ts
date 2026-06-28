@@ -161,6 +161,7 @@ export interface Run {
   resolvedModel?: string;
   provider?: string;
   fallbackAttempts: RunAttempt[];
+  documentIds: string[];
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;
@@ -297,6 +298,7 @@ export const CreateRunInputSchema = z.object({
       })
     )
     .default([]),
+  documentIds: z.array(z.string()).default([]),
   promptTokens: z.number().int().nonnegative().optional(),
   completionTokens: z.number().int().nonnegative().optional(),
   totalTokens: z.number().int().nonnegative().optional(),
@@ -324,6 +326,7 @@ export const UpdateRunInputSchema = z.object({
       })
     )
     .optional(),
+  documentIds: z.array(z.string()).optional(),
   promptTokens: z.number().int().nonnegative().optional(),
   completionTokens: z.number().int().nonnegative().optional(),
   totalTokens: z.number().int().nonnegative().optional(),
