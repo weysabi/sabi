@@ -31,8 +31,8 @@ describe("Server auth", () => {
   });
 
   it("returns 401 when no auth header and apiKey configured", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const authRouter = await createRouter(sabi, { apiKey: "sk-secret" });
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const authRouter = await createRouter(weysabi, { apiKey: "sk-secret" });
     const req = new Request("http://localhost/v1/models");
     const res = await authRouter.fetch(req);
     expect(res.status).toBe(401);
@@ -41,8 +41,8 @@ describe("Server auth", () => {
   });
 
   it("returns 401 on wrong API key", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const authRouter = await createRouter(sabi, { apiKey: "sk-secret" });
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const authRouter = await createRouter(weysabi, { apiKey: "sk-secret" });
     const req = new Request("http://localhost/v1/models", {
       headers: { authorization: "Bearer sk-wrong" },
     });
@@ -51,8 +51,8 @@ describe("Server auth", () => {
   });
 
   it("returns 200 on valid API key", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const authRouter = await createRouter(sabi, { apiKey: "sk-secret" });
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const authRouter = await createRouter(weysabi, { apiKey: "sk-secret" });
     const req = new Request("http://localhost/v1/models", {
       headers: { authorization: "Bearer sk-secret" },
     });
@@ -61,16 +61,16 @@ describe("Server auth", () => {
   });
 
   it("bypasses auth for /health", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const authRouter = await createRouter(sabi, { apiKey: "sk-secret" });
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const authRouter = await createRouter(weysabi, { apiKey: "sk-secret" });
     const req = new Request("http://localhost/health");
     const res = await authRouter.fetch(req);
     expect(res.status).toBe(200);
   });
 
   it("allows requests when no apiKey configured", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const noAuthRouter = await createRouter(sabi);
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const noAuthRouter = await createRouter(weysabi);
     const req = new Request("http://localhost/v1/models");
     const res = await noAuthRouter.fetch(req);
     expect(res.status).toBe(200);
@@ -119,8 +119,8 @@ describe("Server rate limiting", () => {
   });
 
   it("returns 429 after exceeding rate limit", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const rateRouter = await createRouter(sabi, { rateLimitRpm: 1 });
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const rateRouter = await createRouter(weysabi, { rateLimitRpm: 1 });
 
     // First request should succeed
     const req1 = new Request("http://localhost/v1/chat/completions", {
@@ -164,8 +164,8 @@ describe("Server CORS", () => {
   });
 
   it("includes CORS headers on all origins by default", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const corsRouter = await createRouter(sabi);
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const corsRouter = await createRouter(weysabi);
     const req = new Request("http://localhost/v1/models", {
       method: "OPTIONS",
       headers: {
@@ -178,8 +178,8 @@ describe("Server CORS", () => {
   });
 
   it("respects configured CORS origins", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const corsRouter = await createRouter(sabi, {
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const corsRouter = await createRouter(weysabi, {
       corsOrigins: ["https://app.weysabi.co"],
     });
     const req = new Request("http://localhost/v1/models", {
@@ -267,8 +267,8 @@ describe("Scoped auth", () => {
   });
 
   it("chat:write key can access chat completions but not models", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const router = await createRouter(sabi, {
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const router = await createRouter(weysabi, {
       apiKeys: [{ key: "sk-chat", scopes: ["chat:write"] }],
     });
 
@@ -294,8 +294,8 @@ describe("Scoped auth", () => {
   });
 
   it("models:read key can access models but not chat", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const router = await createRouter(sabi, {
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const router = await createRouter(weysabi, {
       apiKeys: [{ key: "sk-models", scopes: ["models:read"] }],
     });
 
@@ -321,8 +321,8 @@ describe("Scoped auth", () => {
   });
 
   it("admin key can access everything", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const router = await createRouter(sabi, {
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const router = await createRouter(weysabi, {
       apiKeys: [{ key: "sk-admin", scopes: ["admin"] }],
     });
 

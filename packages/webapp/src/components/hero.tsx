@@ -36,7 +36,7 @@ export function HeroSection() {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="https://github.com/weysabi/sabi"
+              href="https://github.com/weysabi/weysabi"
               className="inline-flex h-11 items-center rounded-lg border border-border bg-background/70 px-5 text-sm font-medium shadow-sm backdrop-blur transition hover:bg-muted"
             >
               View on GitHub
@@ -73,12 +73,12 @@ export function HeroSection() {
             <pre className="overflow-x-auto p-5 text-[13px] leading-6 sm:p-6">
               <code>{`import { createWeysabi } from "weysabi";
 
-const sabi = createWeysabi({
+const weysabi = createWeysabi({
   groq: { apiKey: process.env.GROQ_API_KEY },
   openai: { apiKey: process.env.OPENAI_API_KEY },
 });
 
-const result = await sabi.complete({
+const result = await weysabi.complete({
   model: "groq/llama-4-scout",
   fallbacks: ["openai/gpt-4o-mini"],
   messages: [

@@ -24,12 +24,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/weysabi/sabi.git"
+    "url": "git+https://github.com/weysabi/weysabi.git"
   },
   "bugs": {
-    "url": "https://github.com/weysabi/sabi/issues"
+    "url": "https://github.com/weysabi/weysabi/issues"
   },
-  "homepage": "https://github.com/weysabi/sabi#readme",
+  "homepage": "https://github.com/weysabi/weysabi#readme",
   "publishConfig": {
     "access": "public"
   },

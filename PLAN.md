@@ -1,7 +1,7 @@
 # Weysabi — Product Plan
 
-**Repository**: `github.com/weysabi/sabi`
-**Package**: `@weysabi/sabi`
+**Repository**: `github.com/weysabi/weysabi`
+**Package**: `@weysabi/weysabi`
 **Domain**: `weysabi.co`
 
 ## Vision
@@ -12,7 +12,7 @@ For fullstack devs who don't have an ML team. You know your stack (TypeScript, R
 
 ## Core Philosophy
 
-- **Single dependency.** Not LangChain + Pinecone + provider SDKs + eval framework. Just `@weysabi/sabi`.
+- **Single dependency.** Not LangChain + Pinecone + provider SDKs + eval framework. Just `@weysabi/weysabi`.
 - **Your keys, your providers.** Weysabi never marks up tokens. You pay OpenAI/Groq/Anthropic directly. Weysabi charges for orchestration — versioning, evals, monitoring, team sync.
 - **Zero config for common cases.** RAG? Point at a PDF. Structured output? Pass a Zod schema.
 - **Works offline-first.** No cloud required. Cloud adds versioning, evals, monitoring, team.
@@ -26,7 +26,7 @@ For fullstack devs who don't have an ML team. You know your stack (TypeScript, R
 Users bring their own API keys. Weysabi routes, fails over, retries, manages prompts. Revenue from cloud features.
 
 ```
-sabi.complete({ model: "groq/llama-4-scout", ... })
+weysabi.complete({ model: "groq/llama-4-scout", ... })
   → sends directly to Groq's API
   → Weysabi never sees the request body
   → you pay Groq, not Weysabi
@@ -34,7 +34,7 @@ sabi.complete({ model: "groq/llama-4-scout", ... })
 
 ### Phase 2 — Hosted Inference (Future)
 
-Weysabi hosts open-source models (Llama, Mistral, DeepSeek). Users use `sabi/llama-4-scout` — Weysabi runs inference, charges per token. Cheaper than Groq/Together (no middleman).
+Weysabi hosts open-source models (Llama, Mistral, DeepSeek). Users use `weysabi/llama-4-scout` — Weysabi runs inference, charges per token. Cheaper than Groq/Together (no middleman).
 
 ### Phase 3 — Smart Routing (Future)
 
@@ -49,7 +49,7 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - Bun workspace with SDK, server, and webapp packages
 - Self-hosted server supports aliases, scoped keys, atomic quotas, usage accounting, and protected admin APIs
 - Webapp provides documentation and a local/self-hosted administration interface
-- Next major architecture work is the project-scoped control plane in `.sabi/CONTROL-PLANE.md`
+- Next major architecture work is the project-scoped control plane in `.weysabi/CONTROL-PLANE.md`
 
 ### Phase 0 — Core Library (Shipped as v0.3.0)
 
@@ -62,12 +62,12 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 
 ### Phase 1 — Streaming (Shipped as v0.4.0)
 
-- [x] `sabi.stream()` returning `AsyncIterable<StreamChunk>`
+- [x] `weysabi.stream()` returning `AsyncIterable<StreamChunk>`
 - [x] Support both SSE and raw streaming from providers
 - [x] `StreamChunk` type: `{ content: string, usage?: Usage, done: boolean }`
 - [x] Auto-detects provider streaming format (OpenAI-style vs Anthropic-style)
-- [x] Framework adapters: `sabi/sse`, `sabi/hono`, `sabi/next`, `sabi/express`, `sabi/fastify`, `sabi/elysia`
-- [x] Client-side: `sabi.readStream(response.body)` for consuming
+- [x] Framework adapters: `weysabi/sse`, `weysabi/hono`, `weysabi/next`, `weysabi/express`, `weysabi/fastify`, `weysabi/elysia`
+- [x] Client-side: `weysabi.readStream(response.body)` for consuming
 
 ### Phase 2 — More Providers (Shipped as v0.4.0)
 
@@ -92,15 +92,15 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] `onFailure` callback with error + metadata
 - [x] `onFallback` callback on failover
 - [x] Cost estimation — `estimatedCostUsd` in every response
-- [x] OpenTelemetry integration pattern (`sabi/otel`)
+- [x] OpenTelemetry integration pattern (`weysabi/otel`)
 - [x] Pluggable cache adapter (`InMemoryCache`, `RedisCache`, BYO `CacheAdapter`)
 
 ### Phase 5 — Distribution (v0.8.0)
 
-- [x] Vercel AI SDK adapter (`sabi/ai-sdk`) — `LanguageModelV3`-compatible, `ProviderV3`
+- [x] Vercel AI SDK adapter (`weysabi/ai-sdk`) — `LanguageModelV3`-compatible, `ProviderV3`
 - [ ] Get listed on `ai-sdk.dev/providers/community-providers`
-- [x] CLI: `bunx sabi <command>` — `init`, `config validate`, `complete`, `stream`, `prompt {list,add,rm}`, `benchmark`, `doctor`
-- [x] Middleware/plugin system — `sabi.use(plugin)` with lifecycle hooks
+- [x] CLI: `bunx weysabi <command>` — `init`, `config validate`, `complete`, `stream`, `prompt {list,add,rm}`, `benchmark`, `doctor`
+- [x] Middleware/plugin system — `weysabi.use(plugin)` with lifecycle hooks
 
 ### Phase 6 — RAG & Memory (v0.7.0)
 
@@ -124,17 +124,17 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] Topic blocking (hate, harassment, violence, sexual, self-harm)
 - [x] OpenAI Moderation API integration (free, catches what regex misses)
 - [x] Output token limits (block, warn, truncate)
-- [x] Custom guardrails — `sabi.guardrail("name", { validate, onViolation })`
+- [x] Custom guardrails — `weysabi.guardrail("name", { validate, onViolation })`
 
 ### Phase 8 — Prompt Management ✅ SHIPPED
 
 - [x] `Prompt` class — typed definition with messages, schema, model, temperature, maxTokens
-- [x] `sabi.prompts.register(def)` / `sabi.prompts.registerMany(defs)` — structured prompt registration
-- [x] `sabi.prompts.run(id, input, overrides?)` — render + execute through full provider pipeline
+- [x] `weysabi.prompts.register(def)` / `weysabi.prompts.registerMany(defs)` — structured prompt registration
+- [x] `weysabi.prompts.run(id, input, overrides?)` — render + execute through full provider pipeline
 - [x] `Prompt.render(input)` — renders `{variable}` in message content
 - [x] `PromptDefinitionSchema` — Zod validation for prompt definitions
-- [x] `@weysabi/sabi/prompts` sub-path export
-- [x] Backward compatible — `sabi.prompt()` / `sabi.render()` continue working
+- [x] `@weysabi/weysabi/prompts` sub-path export
+- [x] Backward compatible — `weysabi.prompt()` / `weysabi.render()` continue working
 - [x] Initial prompt definitions via `SabiOptions.promptDefinitions`
 - [ ] File-based `.prompt.yaml` loading (deferred — see PHASES.md)
 
@@ -143,17 +143,17 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 - [x] `POST /v1/chat/completions` — OpenAI-compatible, stream + non-stream
 - [x] `GET /v1/models` — list configured models
 - [x] `GET /health` — health check
-- [x] `sabi server --port 3000` CLI command
-- [x] `createServer(sabi)` programmatic API
-- [x] Env-var config via `SABI_PORT`, `SABI_*_API_KEY`
+- [x] `weysabi server --port 3000` CLI command
+- [x] `createServer(weysabi)` programmatic API
+- [x] Env-var config via `WEYSABI_PORT`, `WEYSABI_*_API_KEY`
 - [x] `@weysabi/server` sub-path export
 
 ### Phase 10 — Eval Suites (v1.2.0)
 
-- [ ] `sabi.eval.createSuite("name")` — create test suites
+- [ ] `weysabi.eval.createSuite("name")` — create test suites
 - [ ] `suite.addCase({ prompt, inputs, expected })` — add test cases
 - [ ] `suite.run({ model })` — run all cases, get pass/fail
-- [ ] CI gate: `sabi eval check --min-pass=90`
+- [ ] CI gate: `weysabi eval check --min-pass=90`
 
 ### Phase 11 — Cloud Dashboard (v2.0.0)
 
@@ -168,7 +168,7 @@ The orchestration layer is the moat. By the time hosted inference launches, user
 ### Phase 12 — Hosted Inference (v3.0.0)
 
 - [ ] GPU infra for open-source models
-- [ ] `sabi/llama-4-scout`, `sabi/deepseek-v3`, `sabi/mistral-large`
+- [ ] `weysabi/llama-4-scout`, `weysabi/deepseek-v3`, `weysabi/mistral-large`
 - [ ] Auto-scaling, per-token billing
 - [ ] Cheaper than Groq/Together (no middleman)
 
@@ -208,7 +208,7 @@ Cencori routes through their gateway and charges per token. Weysabi is an orches
 ## Package Structure
 
 ```
-@weysabi/sabi/
+@weysabi/weysabi/
 ├── src/
 │   ├── index.ts                 # WeysabiImpl class + createWeysabi() factory
 │   ├── index.test.ts            # Core tests
@@ -242,13 +242,13 @@ Cencori routes through their gateway and charges per token. Weysabi is an orches
 │   │   ├── index.ts             # CLI entry point (commander)
 │   │   ├── utils.ts             # Config load/save, provider test, table print
 │   │   └── commands/
-│   │       ├── init.ts          # sabi init
-│   │       ├── config.ts        # sabi config validate
-│   │       ├── complete.ts      # sabi complete
-│   │       ├── stream.ts        # sabi stream
-│   │       ├── prompt.ts        # sabi prompt {list,add,rm}
-│   │       ├── benchmark.ts     # sabi benchmark
-│   │       └── doctor.ts        # sabi doctor
+│   │       ├── init.ts          # weysabi init
+│   │       ├── config.ts        # weysabi config validate
+│   │       ├── complete.ts      # weysabi complete
+│   │       ├── stream.ts        # weysabi stream
+│   │       ├── prompt.ts        # weysabi prompt {list,add,rm}
+│   │       ├── benchmark.ts     # weysabi benchmark
+│   │       └── doctor.ts        # weysabi doctor
 │   ├── ai-sdk.ts                # Vercel AI SDK adapter (LanguageModelV3)
 │   ├── ai-sdk.test.ts           # AI SDK adapter tests
 │   ├── providers.test.ts        # Provider-specific tests
@@ -285,9 +285,9 @@ Single package. Sub-path exports for adapters. Cloud features runtime-gated by A
 
 ## Key Decisions
 
-- **Name**: Weysabi (Nigerian Pidgin — "wey sabi" = "the one who knows")
+- **Name**: Weysabi (Nigerian Pidgin — "wey weysabi" = "the one who knows")
 - **Org**: `github.com/weysabi` — separate from joinremba
-- **One package**: `@weysabi/sabi`. Adapters loaded via sub-path exports (zero cost if unused)
+- **One package**: `@weysabi/weysabi`. Adapters loaded via sub-path exports (zero cost if unused)
 - **BYOK**: No token markup. Revenue from cloud features
 - **Open-core**: Library always free. Cloud gated by API key
 - **Tests next to source**: `src/*.test.ts` pattern (same as catalog, beacon, gate)

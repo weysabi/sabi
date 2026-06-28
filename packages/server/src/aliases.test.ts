@@ -18,30 +18,30 @@ describe("Model aliases", () => {
   describe("buildModelAliases", () => {
     it("builds map from ModelAlias config", () => {
       const map = buildModelAliases([
-        { alias: "sabi-fast", model: "groq/llama-4-scout" },
-        { alias: "sabi-smart", model: "openai/gpt-4o" },
+        { alias: "weysabi-fast", model: "groq/llama-4-scout" },
+        { alias: "weysabi-smart", model: "openai/gpt-4o" },
       ]);
-      expect(map.get("sabi-fast")).toBe("groq/llama-4-scout");
-      expect(map.get("sabi-smart")).toBe("openai/gpt-4o");
+      expect(map.get("weysabi-fast")).toBe("groq/llama-4-scout");
+      expect(map.get("weysabi-smart")).toBe("openai/gpt-4o");
       expect(map.size).toBe(2);
     });
 
     it("parses env var format", () => {
       const map = buildModelAliases(
         undefined,
-        "sabi-fast=groq/llama-4-scout,sabi-smart=openai/gpt-4o"
+        "weysabi-fast=groq/llama-4-scout,weysabi-smart=openai/gpt-4o"
       );
-      expect(map.get("sabi-fast")).toBe("groq/llama-4-scout");
-      expect(map.get("sabi-smart")).toBe("openai/gpt-4o");
+      expect(map.get("weysabi-fast")).toBe("groq/llama-4-scout");
+      expect(map.get("weysabi-smart")).toBe("openai/gpt-4o");
       expect(map.size).toBe(2);
     });
 
     it("config overrides env var", () => {
       const map = buildModelAliases(
-        [{ alias: "sabi-fast", model: "override/model" }],
-        "sabi-fast=groq/llama-4-scout"
+        [{ alias: "weysabi-fast", model: "override/model" }],
+        "weysabi-fast=groq/llama-4-scout"
       );
-      expect(map.get("sabi-fast")).toBe("override/model");
+      expect(map.get("weysabi-fast")).toBe("override/model");
     });
 
     it("handles empty input", () => {
@@ -52,12 +52,12 @@ describe("Model aliases", () => {
 
   describe("resolveAlias", () => {
     it("returns resolved model for known alias", () => {
-      const map = buildModelAliases([{ alias: "sabi-fast", model: "groq/llama-4-scout" }]);
-      expect(resolveAlias(map, "sabi-fast")).toBe("groq/llama-4-scout");
+      const map = buildModelAliases([{ alias: "weysabi-fast", model: "groq/llama-4-scout" }]);
+      expect(resolveAlias(map, "weysabi-fast")).toBe("groq/llama-4-scout");
     });
 
     it("passes through unknown model", () => {
-      const map = buildModelAliases([{ alias: "sabi-fast", model: "groq/llama-4-scout" }]);
+      const map = buildModelAliases([{ alias: "weysabi-fast", model: "groq/llama-4-scout" }]);
       expect(resolveAlias(map, "openai/gpt-4o")).toBe("openai/gpt-4o");
     });
 
@@ -68,10 +68,10 @@ describe("Model aliases", () => {
 
     it("resolves aliases that reference another alias", () => {
       const map = buildModelAliases([
-        { alias: "sabi-default", model: "sabi-fast" },
-        { alias: "sabi-fast", model: "groq/llama-4-scout" },
+        { alias: "weysabi-default", model: "weysabi-fast" },
+        { alias: "weysabi-fast", model: "groq/llama-4-scout" },
       ]);
-      expect(resolveAlias(map, "sabi-default")).toBe("groq/llama-4-scout");
+      expect(resolveAlias(map, "weysabi-default")).toBe("groq/llama-4-scout");
     });
 
     it("rejects alias cycles", () => {
@@ -85,10 +85,10 @@ describe("Model aliases", () => {
 
   describe("getAliasesList", () => {
     it("returns sorted alias entries", () => {
-      const map = buildModelAliases([{ alias: "sabi-fast", model: "groq/llama-4-scout" }]);
+      const map = buildModelAliases([{ alias: "weysabi-fast", model: "groq/llama-4-scout" }]);
       const list = getAliasesList(map);
       expect(list).toHaveLength(1);
-      expect(list[0]!.alias).toBe("sabi-fast");
+      expect(list[0]!.alias).toBe("weysabi-fast");
       expect(list[0]!.model).toBe("groq/llama-4-scout");
     });
   });
@@ -112,7 +112,7 @@ describe("Model aliases", () => {
       } as unknown as Weysabi;
 
       const router = await createRouter(fakeSabi, {
-        modelAliases: [{ alias: "sabi-fast", model: "groq/llama-4-scout" }],
+        modelAliases: [{ alias: "weysabi-fast", model: "groq/llama-4-scout" }],
       });
 
       const res = await router.fetch(
@@ -120,7 +120,7 @@ describe("Model aliases", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            model: "sabi-fast",
+            model: "weysabi-fast",
             messages: [{ role: "user", content: "Hi" }],
           }),
         })
@@ -148,7 +148,7 @@ describe("Model aliases", () => {
       } as unknown as Weysabi;
 
       const router = await createRouter(fakeSabi, {
-        modelAliases: [{ alias: "sabi-fast", model: "groq/llama-4-scout" }],
+        modelAliases: [{ alias: "weysabi-fast", model: "groq/llama-4-scout" }],
       });
 
       const res = await router.fetch(
@@ -183,7 +183,7 @@ describe("Model aliases", () => {
         },
       } as unknown as Weysabi;
       const router = await createRouter(fakeSabi, {
-        modelAliases: [{ alias: "sabi-backup", model: "openai/gpt-4o-mini" }],
+        modelAliases: [{ alias: "weysabi-backup", model: "openai/gpt-4o-mini" }],
       });
 
       const response = await router.fetch(
@@ -193,7 +193,7 @@ describe("Model aliases", () => {
           body: JSON.stringify({
             model: "groq/llama-4-scout",
             messages: [{ role: "user", content: "Hi" }],
-            sabi_fallbacks: ["sabi-backup"],
+            weysabi_fallbacks: ["weysabi-backup"],
           }),
         })
       );
@@ -203,18 +203,18 @@ describe("Model aliases", () => {
     });
 
     it("GET /v1/models includes aliases", async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
-        modelAliases: [{ alias: "sabi-fast", model: "groq/llama-4-scout" }],
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
+        modelAliases: [{ alias: "weysabi-fast", model: "groq/llama-4-scout" }],
       });
 
       const res = await router.fetch(new Request("http://localhost/v1/models"));
       const body = (await res.json()) as Record<string, unknown>;
       const data = body.data as Array<Record<string, unknown>>;
 
-      // sabi-proxy + sabi-fast alias
+      // weysabi-proxy + weysabi-fast alias
       expect(data).toHaveLength(2);
-      const aliasEntry = data.find((entry: Record<string, unknown>) => entry.id === "sabi-fast");
+      const aliasEntry = data.find((entry: Record<string, unknown>) => entry.id === "weysabi-fast");
       expect(aliasEntry).toBeTruthy();
       expect(aliasEntry!.owned_by).toBe("groq/llama-4-scout");
     });

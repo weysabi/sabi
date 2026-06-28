@@ -135,8 +135,8 @@ describe("Token quotas", () => {
       });
       if (!existing.allowed) throw new Error("reservation should be allowed");
       await store.commit(existing.reservation.id, 1000);
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         quotaConfig: { maxTokensPerMin: 1000 },
         quotaStore: store,
         apiKey: "sk-quota-key",
@@ -163,8 +163,8 @@ describe("Token quotas", () => {
 
     it("records token usage after successful request", async () => {
       const store = new InMemoryTokenQuotaStore();
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         quotaConfig: { maxTokensPerMin: 10000 },
         quotaStore: store,
         apiKey: "sk-recording",
@@ -194,8 +194,8 @@ describe("Token quotas", () => {
 
     it("bypasses quota when no auth key", async () => {
       const store = new InMemoryTokenQuotaStore();
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         quotaConfig: { maxTokensPerMin: 1 },
         quotaStore: store,
       });

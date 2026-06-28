@@ -243,7 +243,7 @@ async function injectRagContext(
 }
 
 export function createConversationService(
-  sabi: Weysabi,
+  weysabi: Weysabi,
   store: ControlPlaneStore,
   quota?: { store: TokenQuotaStore; config?: TokenQuotaConfig },
   ragService?: RagService
@@ -290,7 +290,7 @@ export function createConversationService(
       }
 
       try {
-        const response = await sabi.complete(request);
+        const response = await weysabi.complete(request);
         if (quotaReservation && qt) {
           await qt.store.commit(
             quotaReservation.id,
@@ -416,7 +416,7 @@ export function createConversationService(
       let usage: ConversationUsage | undefined;
       const startedAt = Date.now();
       try {
-        for await (const chunk of sabi.stream(request)) {
+        for await (const chunk of weysabi.stream(request)) {
           if (chunk.content) {
             content += chunk.content;
             yield { type: "content.delta", content: chunk.content };

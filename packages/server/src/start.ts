@@ -13,32 +13,32 @@ import {
 const providers = resolveProvidersFromEnv();
 requireProviders(providers);
 
-const sabi = createWeysabi(providers);
+const weysabi = createWeysabi(providers);
 
 const config = validateOrExit();
 if (!config) {
   process.exit(1);
 }
 
-const port = config.get<number>("SABI_PORT");
-const hostname = config.get<string>("SABI_HOST");
-const apiKey = config.get<string>("SABI_API_KEY") || undefined;
-const adminApiKey = config.get<string>("SABI_ADMIN_API_KEY") || undefined;
-const apiKeys = process.env.SABI_API_KEYS ? parseApiKeys(process.env.SABI_API_KEYS) : undefined;
+const port = config.get<number>("WEYSABI_PORT");
+const hostname = config.get<string>("WEYSABI_HOST");
+const apiKey = config.get<string>("WEYSABI_API_KEY") || undefined;
+const adminApiKey = config.get<string>("WEYSABI_ADMIN_API_KEY") || undefined;
+const apiKeys = process.env.WEYSABI_API_KEYS ? parseApiKeys(process.env.WEYSABI_API_KEYS) : undefined;
 const corsOrigins = config
-  .get<string>("SABI_CORS_ORIGINS")
+  .get<string>("WEYSABI_CORS_ORIGINS")
   .split(",")
   .map((s: string) => s.trim());
-const rateLimitRpm = config.get<number>("SABI_RATE_LIMIT_RPM");
-const idempotencyTtl = config.get<number>("SABI_IDEMPOTENCY_TTL");
-const maxBodyBytes = config.get<number>("SABI_MAX_BODY_BYTES");
+const rateLimitRpm = config.get<number>("WEYSABI_RATE_LIMIT_RPM");
+const idempotencyTtl = config.get<number>("WEYSABI_IDEMPOTENCY_TTL");
+const maxBodyBytes = config.get<number>("WEYSABI_MAX_BODY_BYTES");
 const trustedProxies = config
-  .get<string>("SABI_TRUSTED_PROXIES")
+  .get<string>("WEYSABI_TRUSTED_PROXIES")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
 
-const server = await createServer(sabi, {
+const server = await createServer(weysabi, {
   port,
   hostname,
   apiKey,

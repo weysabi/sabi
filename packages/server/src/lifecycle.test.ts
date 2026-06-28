@@ -5,12 +5,12 @@ import { createServer } from "./index";
 describe("createServer lifecycle", () => {
   it("binds the requested hostname and closes owned resources once", async () => {
     let closeCalls = 0;
-    const sabi = {
+    const weysabi = {
       close() {
         closeCalls++;
       },
     } as unknown as Weysabi;
-    const server = await createServer(sabi, {
+    const server = await createServer(weysabi, {
       port: 0,
       hostname: "127.0.0.1",
     });

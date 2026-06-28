@@ -23,13 +23,13 @@ export interface RegisterControlRoutesOptions {
 
 export function registerControlRoutes(
   app: HonoApp,
-  sabi: Weysabi,
+  weysabi: Weysabi,
   store: ControlPlaneStore,
   options: RegisterControlRoutesOptions = {}
 ): void {
   const context: ControlRouteContext = {
     app,
-    sabi,
+    weysabi,
     store,
     projects: createProjectService(store.projects),
     prompts: createPromptService(store.prompts),

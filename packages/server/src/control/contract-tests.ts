@@ -735,7 +735,7 @@ export function apiKeyStoreContractTests(
         expect(key.name).toBe("dev key");
         expect(key.scopes).toEqual(["chat:write", "conversations:read"]);
         expect(key.fingerprint).toBeTruthy();
-        expect(key.secret).toStartWith("sabi_");
+        expect(key.secret).toStartWith("weysabi_");
         expect(key.fingerprint).not.toBe(key.id);
         expect(key.fingerprint).not.toContain(key.secret);
 

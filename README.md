@@ -5,13 +5,13 @@
 ```ts
 import { createWeysabi } from "weysabi";
 
-const sabi = createWeysabi({
+const weysabi = createWeysabi({
   openai: { apiKey: process.env.OPENAI_API_KEY },
   groq: { apiKey: process.env.GROQ_API_KEY },
   anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
 });
 
-const result = await sabi.complete({
+const result = await weysabi.complete({
   model: "groq/llama-4-scout",
   prompt: "refund",
   inputs: { reason: "Item damaged", amount: "5000" },
@@ -44,12 +44,12 @@ const result = await sabi.complete({
 | Tool calling (auto-execute + chaining)                                       | ✅     |
 | Telemetry hooks (latency, cost, errors, fallback)                            | ✅     |
 | Cost estimation (per-response `estimatedCostUsd`)                            | ✅     |
-| Plugin system (`sabi.use()` lifecycle hooks)                                 | ✅     |
+| Plugin system (`weysabi.use()` lifecycle hooks)                                 | ✅     |
 | Cache adapter (`InMemoryCache`, `RedisCache`, BYO)                           | ✅     |
-| OpenTelemetry integration (`sabi/otel`)                                      | ✅     |
-| Vercel AI SDK adapter (`sabi/ai-sdk`)                                        | ✅     |
+| OpenTelemetry integration (`weysabi/otel`)                                      | ✅     |
+| Vercel AI SDK adapter (`weysabi/ai-sdk`)                                        | ✅     |
 | Mistral + Ollama providers                                                   | ✅     |
-| CLI (`sabi init`, `complete`, `stream`, `config`, `prompt`, etc.)            | ✅     |
+| CLI (`weysabi init`, `complete`, `stream`, `config`, `prompt`, etc.)            | ✅     |
 | RAG (zero-config, local or cloud)                                            | ✅     |
 | Memory & conversations (persistent sessions, auto-truncation)                | ✅     |
 | ChatSDK (prepare + call + record in one)                                     | ✅     |
@@ -73,16 +73,16 @@ bun add weysabi
 ```ts
 import { createWeysabi } from "weysabi";
 
-const sabi = createWeysabi({
+const weysabi = createWeysabi({
   groq: { apiKey: process.env.GROQ_API_KEY },
   openai: { apiKey: process.env.OPENAI_API_KEY },
 });
 
 // Prompt templates
-sabi.prompt("translate", "Translate {text} to {language}");
+weysabi.prompt("translate", "Translate {text} to {language}");
 
 // Type-safe completions with auto-failover
-const result = await sabi.complete({
+const result = await weysabi.complete({
   model: "groq/llama-4-scout",
   prompt: "translate",
   inputs: { text: "Hello", language: "French" },
@@ -97,7 +97,7 @@ console.log(result.content); // "Bonjour"
 Configure any provider with just an API key. Custom `baseUrl` for self-hosted / OpenAI-compatible endpoints.
 
 ```ts
-const sabi = createWeysabi({
+const weysabi = createWeysabi({
   openai: { apiKey: "sk-..." },
   anthropic: { apiKey: "sk-ant-..." },
   google: { apiKey: "AIza..." },
@@ -113,10 +113,10 @@ const sabi = createWeysabi({
 Use `provider/model` notation:
 
 ```ts
-sabi.complete({ model: "anthropic/claude-3-5-sonnet-20241022", ... })
-sabi.complete({ model: "google/gemini-2.0-flash", ... })
-sabi.complete({ model: "groq/llama-4-scout", ... })
-sabi.complete({ model: "openai/gpt-4o", ... })
+weysabi.complete({ model: "anthropic/claude-3-5-sonnet-20241022", ... })
+weysabi.complete({ model: "google/gemini-2.0-flash", ... })
+weysabi.complete({ model: "groq/llama-4-scout", ... })
+weysabi.complete({ model: "openai/gpt-4o", ... })
 ```
 
 ## Structured Output
@@ -131,7 +131,7 @@ const UserSchema = z.object({
   age: z.number(),
 });
 
-const result = await sabi.complete({
+const result = await weysabi.complete({
   model: "groq/llama-4-scout",
   messages: [{ role: "user", content: "Get user info" }],
   schema: UserSchema,
@@ -146,7 +146,7 @@ On failure, throws `SchemaValidationError` with `.raw` (raw response) and `.issu
 ## Streaming
 
 ```ts
-for await (const chunk of sabi.stream({
+for await (const chunk of weysabi.stream({
   model: "groq/llama-4-scout",
   messages: [{ role: "user", content: "Write a story" }],
   fallbacks: ["openai/gpt-4o-mini"],
@@ -177,21 +177,21 @@ import { toResponse } from "weysabi/hono";
 // import { toResponse } from "weysabi/sse"; // generic
 
 app.post("/chat", async (c) => {
-  const stream = sabi.stream({ ... });
+  const stream = weysabi.stream({ ... });
   return toResponse(stream);
 });
 
 // Express
 import { pipe } from "weysabi/express";
 app.post("/chat", async (req, res) => {
-  const stream = sabi.stream({ ... });
+  const stream = weysabi.stream({ ... });
   await pipe(stream, res);
 });
 
 // Fastify
 import { pipe } from "weysabi/fastify";
 app.post("/chat", async (req, reply) => {
-  const stream = sabi.stream({ ... });
+  const stream = weysabi.stream({ ... });
   await pipe(stream, reply);
 });
 ```
@@ -203,23 +203,23 @@ app.post("/chat", async (req, reply) => {
 bunx create-weysabi-app my-app         # Quick scaffold
 
 # Quick start
-bun sabi init                          # Interactive setup
-bun sabi config validate               # Test all provider keys
-bun sabi complete "Hello" -m groq/llama-4-scout
-bun sabi stream "Tell me a story" -m openai/gpt-4o-mini
-bun sabi prompt list|add|rm            # Manage prompt templates
-bun sabi benchmark                     # Latency comparison (3 runs/provider)
-bun sabi doctor                        # System diagnostics
+bun weysabi init                          # Interactive setup
+bun weysabi config validate               # Test all provider keys
+bun weysabi complete "Hello" -m groq/llama-4-scout
+bun weysabi stream "Tell me a story" -m openai/gpt-4o-mini
+bun weysabi prompt list|add|rm            # Manage prompt templates
+bun weysabi benchmark                     # Latency comparison (3 runs/provider)
+bun weysabi doctor                        # System diagnostics
 ```
 
-Config is read from `sabi.json`, `~/.config/sabi/config.json`, or `SABI_*_API_KEY` env vars.
+Config is read from `weysabi.json`, `~/.config/weysabi/config.json`, or `WEYSABI_*_API_KEY` env vars.
 
 ## Plugin System
 
 ```ts
-const sabi = createWeysabi({ groq: { apiKey } });
+const weysabi = createWeysabi({ groq: { apiKey } });
 
-sabi.use({
+weysabi.use({
   name: "logger",
   onCompleteRequest(req) {
     console.log("Sending:", req.model);
@@ -242,10 +242,10 @@ import { InMemoryCache, RedisCache } from "weysabi/cache";
 // or: import { cacheKey } from "weysabi";
 
 // In-memory
-const sabi = createWeysabi(providers, { cache: new InMemoryCache(60_000) });
+const weysabi = createWeysabi(providers, { cache: new InMemoryCache(60_000) });
 
 // Redis (any Redis-like client)
-const sabi = createWeysabi(providers, {
+const weysabi = createWeysabi(providers, {
   cache: new RedisCache(new Redis(), 60_000),
 });
 
@@ -258,8 +258,8 @@ const sabi = createWeysabi(providers, {
 import { createOtelPlugin } from "weysabi/otel";
 import { trace } from "@opentelemetry/api";
 
-const sabi = createWeysabi(providers);
-sabi.use(createOtelPlugin({ tracer: trace.getTracer("my-app") }));
+const weysabi = createWeysabi(providers);
+weysabi.use(createOtelPlugin({ tracer: trace.getTracer("my-app") }));
 ```
 
 ## Vercel AI SDK Adapter
@@ -267,7 +267,7 @@ sabi.use(createOtelPlugin({ tracer: trace.getTracer("my-app") }));
 ```ts
 import { createWeysabiProvider } from "weysabi/ai-sdk";
 
-const provider = createWeysabiProvider(sabi);
+const provider = createWeysabiProvider(weysabi);
 const result = await generateText({
   model: provider.languageModel("groq/llama-4-scout"),
   prompt: "Hello",
@@ -294,18 +294,18 @@ import { createServer } from "weysabi-server";
 Deploy Weysabi as an OpenAI-compatible HTTP server. Frontend devs point their OpenAI SDK at it and get provider failover, caching, rate limiting, and auth — no backend code.
 
 ```bash
-# Quick start — uses SABI_*_API_KEY env vars
+# Quick start — uses WEYSABI_*_API_KEY env vars
 bunx weysabi-server --port 3000
 
-# Or via the sabi CLI
-bun sabi server --port 3000
+# Or via the weysabi CLI
+bun weysabi server --port 3000
 ```
 
 ```ts
 // Embed in your app
 import { createServer } from "weysabi-server";
 
-const server = await createServer(sabi, {
+const server = await createServer(weysabi, {
   apiKey: "sk-my-key",
   providers: ["groq", "openai"],
 });
@@ -315,7 +315,7 @@ const server = await createServer(sabi, {
 
 Works with any OpenAI SDK client — `useChat()`, `new OpenAI()`, `curl`.
 
-**Configuration:** Set `SABI_*_API_KEY` env vars for providers. Optional: `SABI_API_KEY` for auth, `SABI_API_KEYS` for scoped keys (`key:chat:write;key2:admin`), `SABI_PORT` (default `3000`), `SABI_RATE_LIMIT_RPM` (default `300`).
+**Configuration:** Set `WEYSABI_*_API_KEY` env vars for providers. Optional: `WEYSABI_API_KEY` for auth, `WEYSABI_API_KEYS` for scoped keys (`key:chat:write;key2:admin`), `WEYSABI_PORT` (default `3000`), `WEYSABI_RATE_LIMIT_RPM` (default `300`).
 
 ## RAG (Retrieval-Augmented Generation)
 
@@ -326,7 +326,7 @@ import { RagEngine, RagManager } from "weysabi/rag";
 
 // Single project
 const rag = new RagEngine({
-  dbPath: ".sabi/my-docs.db",
+  dbPath: ".weysabi/my-docs.db",
   embeddingModel: "openai/text-embedding-3-small",
 });
 
@@ -344,7 +344,7 @@ const results = await rag.query("How do I reset the device?");
 
 // Multi-project manager
 const manager = new RagManager({
-  basePath: ".sabi/rag/projects",
+  basePath: ".weysabi/rag/projects",
   providers: { embeddingProvider: { provider: "openai", apiKey: "..." } },
 });
 const docs = manager.project("docs-v2");
@@ -380,7 +380,7 @@ Provider-agnostic conversation memory with automatic context management. Persist
 import { ConversationMemory } from "weysabi/chat";
 
 const memory = new ConversationMemory({
-  dbPath: ".sabi/chat.db",
+  dbPath: ".weysabi/chat.db",
   maxHistoryTokens: 16384,
 });
 
@@ -443,7 +443,7 @@ Wraps `ConversationMemory` with a provider adapter for prepare + call + record i
 ```ts
 import { ConversationMemory, ChatSDK, OpenAIAdapter } from "weysabi/chat";
 
-const memory = new ConversationMemory({ dbPath: ".sabi/chat.db" });
+const memory = new ConversationMemory({ dbPath: ".weysabi/chat.db" });
 
 const chat = new ChatSDK({
   memory,

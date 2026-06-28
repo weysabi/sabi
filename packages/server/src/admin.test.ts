@@ -7,16 +7,16 @@ import { fingerprintApiKey } from "./quota";
 describe("Admin endpoints", () => {
   describe("Scoped auth", () => {
     it("does not expose admin routes without an explicit admin API key", async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi);
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi);
 
       const res = await router.fetch(new Request("http://localhost/v1/admin/stats"));
       expect(res.status).toBe(404);
     });
 
     it("returns 401 when the admin API key is missing or incorrect", async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, { adminApiKey: "sk-admin" });
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, { adminApiKey: "sk-admin" });
 
       const missing = await router.fetch(new Request("http://localhost/v1/admin/stats"));
       expect(missing.status).toBe(401);
@@ -30,8 +30,8 @@ describe("Admin endpoints", () => {
     });
 
     it("does not accept a normal scoped API key on admin endpoints", async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         apiKeys: [{ key: "sk-chat", scopes: ["chat:write"] }],
         adminApiKey: "sk-admin",
       });
@@ -52,8 +52,8 @@ describe("Admin endpoints", () => {
     });
 
     it("admin key can access admin endpoints", async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, { adminApiKey: "sk-admin" });
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, { adminApiKey: "sk-admin" });
 
       const statsRes = await router.fetch(
         new Request("http://localhost/v1/admin/stats", {
@@ -73,8 +73,8 @@ describe("Admin endpoints", () => {
 
   describe("GET /v1/admin/stats", () => {
     it("returns zero stats when no usage recorded", async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, { adminApiKey: "sk-admin" });
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, { adminApiKey: "sk-admin" });
 
       const res = await router.fetch(
         new Request("http://localhost/v1/admin/stats", {
@@ -112,8 +112,8 @@ describe("Admin endpoints", () => {
         status: "success",
       });
 
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         usageLedger: ledger,
         adminApiKey: "sk-admin",
       });
@@ -148,8 +148,8 @@ describe("Admin endpoints", () => {
         });
       }
 
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         usageLedger: ledger,
         adminApiKey: "sk-admin",
       });
@@ -188,8 +188,8 @@ describe("Admin endpoints", () => {
         status: "success",
       });
 
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-      const router = await createRouter(sabi, {
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const router = await createRouter(weysabi, {
         usageLedger: ledger,
         adminApiKey: "sk-admin",
       });

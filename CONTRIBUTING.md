@@ -5,8 +5,8 @@ Thanks for considering contributing to Weysabi!
 ## Setup
 
 ```bash
-git clone https://github.com/weysabi/sabi.git
-cd sabi
+git clone https://github.com/weysabi/weysabi.git
+cd weysabi
 bun install
 ```
 

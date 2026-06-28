@@ -16,7 +16,7 @@ import { IdempotencyConflictError } from "../../errors";
 
 export function registerConversationRoutes({
   app,
-  sabi,
+  weysabi,
   projects,
   store,
   idempotency,
@@ -26,7 +26,7 @@ export function registerConversationRoutes({
 }: ControlRouteContext): void {
   const conversations = store.conversations;
   const conversationService = createConversationService(
-    sabi,
+    weysabi,
     store,
     quotaStore ? { store: quotaStore, config: quotaConfig } : undefined,
     ragService

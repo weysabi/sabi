@@ -26,8 +26,8 @@ const OpenAiRequestSchema = z
     n: z.number().int().positive().optional(),
     tools: z.unknown().optional(),
     tool_choice: z.unknown().optional(),
-    sabi_fallbacks: z.array(z.string()).optional(),
-    sabi_rag: z.boolean().optional(),
+    weysabi_fallbacks: z.array(z.string()).optional(),
+    weysabi_rag: z.boolean().optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -79,8 +79,8 @@ export function translateRequest(body: Record<string, unknown>): CompleteRequest
   if (parsed.stream_options?.include_usage !== undefined) {
     req.includeUsage = parsed.stream_options.include_usage;
   }
-  if (parsed.sabi_fallbacks) req.fallbacks = parsed.sabi_fallbacks;
-  if (parsed.sabi_rag === true) req.rag = true;
+  if (parsed.weysabi_fallbacks) req.fallbacks = parsed.weysabi_fallbacks;
+  if (parsed.weysabi_rag === true) req.rag = true;
 
   return req;
 }
@@ -99,7 +99,7 @@ export function translateResponse(
   model: string
 ): Record<string, unknown> {
   return {
-    id: `sabi-${crypto.randomUUID()}`,
+    id: `weysabi-${crypto.randomUUID()}`,
     object: "chat.completion",
     created: Math.floor(Date.now() / 1000),
     model,
@@ -128,7 +128,7 @@ export function translateStreamChunk(chunk: StreamChunk, model: string): string 
     return "data: [DONE]\n\n";
   }
 
-  const id = `sabi-${crypto.randomUUID()}`;
+  const id = `weysabi-${crypto.randomUUID()}`;
   const data: Record<string, unknown> = {
     id,
     object: "chat.completion.chunk",

@@ -29,33 +29,6 @@
         "typescript": "^5",
       },
     },
-    "packages/sabi": {
-      "name": "weysabi",
-      "version": "0.10.0",
-      "bin": {
-        "sabi": "./src/cli/index.ts",
-      },
-      "dependencies": {
-        "@clack/prompts": "^1.5.1",
-        "@joinremba/catalog": "^0.5.0",
-        "commander": "^15.0.0",
-        "postgres": "^3.4.9",
-        "zod": "^4.4.2",
-      },
-      "devDependencies": {
-        "@ai-sdk/provider": "^3.0.10",
-        "@types/bun": "latest",
-        "@typescript-eslint/eslint-plugin": "^7.18.0",
-        "@typescript-eslint/parser": "^7.18.0",
-        "eslint": "^8.57.1",
-        "eslint-config-prettier": "^10.1.8",
-        "prettier": "^3.8.3",
-        "typescript": "^6.0.3",
-      },
-      "peerDependencies": {
-        "@ai-sdk/provider": "^3.0.10",
-      },
-    },
     "packages/server": {
       "name": "weysabi-server",
       "version": "0.10.0",
@@ -103,6 +76,33 @@
         "postcss": "^8",
         "tailwindcss": "^4",
         "typescript": "^5",
+      },
+    },
+    "packages/weysabi": {
+      "name": "weysabi",
+      "version": "0.10.0",
+      "bin": {
+        "weysabi": "./src/cli/index.ts",
+      },
+      "dependencies": {
+        "@clack/prompts": "^1.5.1",
+        "@joinremba/catalog": "^0.5.0",
+        "commander": "^15.0.0",
+        "postgres": "^3.4.9",
+        "zod": "^4.4.2",
+      },
+      "devDependencies": {
+        "@ai-sdk/provider": "^3.0.10",
+        "@types/bun": "latest",
+        "@typescript-eslint/eslint-plugin": "^7.18.0",
+        "@typescript-eslint/parser": "^7.18.0",
+        "eslint": "^8.57.1",
+        "eslint-config-prettier": "^10.1.8",
+        "prettier": "^3.8.3",
+        "typescript": "^6.0.3",
+      },
+      "peerDependencies": {
+        "@ai-sdk/provider": "^3.0.10",
       },
     },
   },
@@ -1469,7 +1469,7 @@
 
     "vfile-message": ["vfile-message@4.0.3", "", { "dependencies": { "@types/unist": "^3.0.0", "unist-util-stringify-position": "^4.0.0" } }, "sha512-QTHzsGd1EhbZs4AsQ20JX1rC3cOlt/IWJruk893DfLRr57lcnOeMaWG4K0JrRta4mIJZKth2Au3mM3u03/JWKw=="],
 
-    "weysabi": ["weysabi@workspace:packages/sabi"],
+    "weysabi": ["weysabi@workspace:packages/weysabi"],
 
     "weysabi-server": ["weysabi-server@workspace:packages/server"],
 

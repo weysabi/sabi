@@ -21,8 +21,8 @@ function resolveControlPlaneStore(options: ServerOptions) {
   if (explicit) return explicit;
   if (options.controlPlane) {
     const dbPath = options.storage === "sqlite"
-      ? resolve(process.env.SABI_CONTROL_DB ?? ".sabi/control.db")
-      : resolve(".sabi/control.db");
+      ? resolve(process.env.WEYSABI_CONTROL_DB ?? ".weysabi/control.db")
+      : resolve(".weysabi/control.db");
     mkdirSync(dirname(dbPath), { recursive: true });
     return createSqliteControlPlaneStore(dbPath);
   }
@@ -30,7 +30,7 @@ function resolveControlPlaneStore(options: ServerOptions) {
 }
 
 export async function createServer(
-  sabi: Weysabi,
+  weysabi: Weysabi,
   options: ServerOptions = {}
 ): Promise<{
   fetch: (req: Request) => Response | Promise<Response>;
@@ -38,22 +38,22 @@ export async function createServer(
   hostname: string;
   stop: () => void;
 }> {
-  const apiKey = options.apiKey ?? process.env.SABI_API_KEY;
-  const adminApiKey = options.adminApiKey ?? process.env.SABI_ADMIN_API_KEY;
+  const apiKey = options.apiKey ?? process.env.WEYSABI_API_KEY;
+  const adminApiKey = options.adminApiKey ?? process.env.WEYSABI_ADMIN_API_KEY;
   const apiKeys = options.apiKeys;
-  const port = options.port ?? envInteger("SABI_PORT", 3000);
-  const hostname = options.hostname ?? process.env.SABI_HOST ?? "0.0.0.0";
+  const port = options.port ?? envInteger("WEYSABI_PORT", 3000);
+  const hostname = options.hostname ?? process.env.WEYSABI_HOST ?? "0.0.0.0";
   const corsOrigins =
     options.corsOrigins ??
-    (process.env.SABI_CORS_ORIGINS
-      ? process.env.SABI_CORS_ORIGINS.split(",").map((s) => s.trim())
+    (process.env.WEYSABI_CORS_ORIGINS
+      ? process.env.WEYSABI_CORS_ORIGINS.split(",").map((s) => s.trim())
       : ["*"]);
-  const rateLimitRpm = options.rateLimitRpm ?? envInteger("SABI_RATE_LIMIT_RPM", 300);
-  const idempotencyTtl = options.idempotencyTtl ?? envInteger("SABI_IDEMPOTENCY_TTL", 86400);
-  const maxBodyBytes = options.maxBodyBytes ?? envInteger("SABI_MAX_BODY_BYTES", 1024 * 1024);
+  const rateLimitRpm = options.rateLimitRpm ?? envInteger("WEYSABI_RATE_LIMIT_RPM", 300);
+  const idempotencyTtl = options.idempotencyTtl ?? envInteger("WEYSABI_IDEMPOTENCY_TTL", 86400);
+  const maxBodyBytes = options.maxBodyBytes ?? envInteger("WEYSABI_MAX_BODY_BYTES", 1024 * 1024);
   const trustedProxies =
     options.trustedProxies ??
-    (process.env.SABI_TRUSTED_PROXIES ?? "")
+    (process.env.WEYSABI_TRUSTED_PROXIES ?? "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
@@ -61,7 +61,7 @@ export async function createServer(
 
   const ctrlStore = resolveControlPlaneStore(options);
 
-  const router = await createRouter(sabi, {
+  const router = await createRouter(weysabi, {
     port,
     apiKey,
     adminApiKey,
@@ -104,7 +104,7 @@ export async function createServer(
       server.stop();
       router.close();
       if (options.closeSabiOnStop !== false) {
-        sabi.close?.();
+        weysabi.close?.();
       }
     },
   };

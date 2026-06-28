@@ -14,7 +14,7 @@ const ExecutePromptBodySchema = z.object({
   stream: z.boolean().optional(),
 });
 
-export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRouteContext): void {
+export function registerPromptRoutes({ app, weysabi, projects, prompts }: ControlRouteContext): void {
   app.post("/v1/projects/:projectId/prompts", async (c) => {
     const projectId = c.req.param("projectId");
     await requireProject(projects, projectId);
@@ -123,7 +123,7 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     };
 
     if (body.stream === true) {
-      const iterable = sabi.stream(request as StreamRequest);
+      const iterable = weysabi.stream(request as StreamRequest);
       return new Response(
         new ReadableStream({
           async pull(controller) {
@@ -152,7 +152,7 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
       );
     }
 
-    const result = await sabi.complete(request);
+    const result = await weysabi.complete(request);
     return c.json(result);
   });
 }

@@ -52,8 +52,8 @@ describe("Server integration", () => {
   beforeAll(async () => {
     originalFetch = globalThis.fetch;
     mockJsonResponse();
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    router = await createRouter(sabi);
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    router = await createRouter(weysabi);
   });
 
   afterAll(() => {
@@ -109,7 +109,7 @@ describe("Server integration", () => {
     expect(parsed.object).toBe("chat.completion.chunk");
   });
 
-  it("GET /v1/models returns sabi-proxy when no providers configured", async () => {
+  it("GET /v1/models returns weysabi-proxy when no providers configured", async () => {
     const req = new Request("http://localhost/v1/models");
     const res = await router.fetch(req);
     expect(res.status).toBe(200);
@@ -117,12 +117,12 @@ describe("Server integration", () => {
     const data = body.data as Array<Record<string, unknown>>;
     expect(body.object).toBe("list");
     expect(data).toHaveLength(1);
-    expect(data[0]!.id).toBe("sabi-proxy");
+    expect(data[0]!.id).toBe("weysabi-proxy");
   });
 
   it("GET /v1/models returns provider models when providers specified", async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const providerRouter = await createRouter(sabi, {
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const providerRouter = await createRouter(weysabi, {
       providers: ["groq", "openai"],
     });
     const req = new Request("http://localhost/v1/models");

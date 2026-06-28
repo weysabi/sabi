@@ -45,7 +45,7 @@ const features = [
     icon: BookOpen,
     title: "Server & CLI",
     description:
-      "Drop-in OpenAI-compatible HTTP server. CLI for `sabi init`, `sabi server`, and interactive provider setup.",
+      "Drop-in OpenAI-compatible HTTP server. CLI for `weysabi init`, `weysabi server`, and interactive provider setup.",
     gradient: "from-cyan-500/20 via-cyan-500/5 to-transparent",
     iconBg: "bg-cyan-500/10 text-cyan-600",
   },

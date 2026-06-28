@@ -65,7 +65,7 @@ export interface ServerOptions {
 type HonoApp = Hono;
 
 function sseErrorEvent(message: string): string {
-  return `data: ${JSON.stringify({ error: { message, type: "sabi_error" } })}\n\n`;
+  return `data: ${JSON.stringify({ error: { message, type: "weysabi_error" } })}\n\n`;
 }
 
 function estimateRequestTokens(request: {
@@ -97,7 +97,7 @@ const AdminUsageQuerySchema = z.object({
 });
 
 export async function createRouter(
-  sabi: Weysabi,
+  weysabi: Weysabi,
   options: ServerOptions = {}
 ): Promise<{
   fetch: (req: Request) => Response | Promise<Response>;
@@ -229,7 +229,7 @@ export async function createRouter(
           }))
         : [
             {
-              id: "sabi-proxy",
+              id: "weysabi-proxy",
               object: "model",
               created: Math.floor(Date.now() / 1000),
               owned_by: "weysabi",
@@ -286,7 +286,7 @@ export async function createRouter(
     const hasQuotaLimits =
       quotaConfig?.maxTokensPerMin !== undefined || quotaConfig?.maxTokensPerDay !== undefined;
     ragService = options.ragConfig ? createRagService(options.ragConfig) : undefined;
-    registerControlRoutes(app, sabi, options.controlPlaneStore, {
+    registerControlRoutes(app, weysabi, options.controlPlaneStore, {
       idempotency: idemp,
       ...(options.quotaStore || hasQuotaLimits ? { quotaStore, quotaConfig } : {}),
       ragService,
@@ -345,7 +345,7 @@ export async function createRouter(
     });
 
     if (stream) {
-      const iterable = sabi.stream({ ...request, signal: c.req.raw.signal });
+      const iterable = weysabi.stream({ ...request, signal: c.req.raw.signal });
       const iterator = iterable[Symbol.asyncIterator]();
       const model = request.model as string;
       let quotaSettled = false;
@@ -414,7 +414,7 @@ export async function createRouter(
 
     let response;
     try {
-      response = await sabi.complete(request);
+      response = await weysabi.complete(request);
     } catch (err) {
       if (quotaReservation) await quotaStore.release(quotaReservation.id);
       throw err;

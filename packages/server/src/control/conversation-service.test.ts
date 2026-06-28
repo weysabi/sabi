@@ -81,8 +81,8 @@ describe("ConversationService", () => {
       const store = await createSqliteControlPlaneStore(":memory:");
       try {
         const { projectId } = await seedStore(store);
-        const sabi = createWeysabi({ openai: { apiKey: "key" } });
-        const cs = createConversationService(sabi, store);
+        const weysabi = createWeysabi({ openai: { apiKey: "key" } });
+        const cs = createConversationService(weysabi, store);
         const conv = await store.conversations.createConversation({
           projectId,
           externalUserId: "user-1",
@@ -111,11 +111,11 @@ describe("ConversationService", () => {
       const store = await createSqliteControlPlaneStore(":memory:");
       try {
         const { projectId } = await seedStore(store);
-        const sabi = createWeysabi(
+        const weysabi = createWeysabi(
           { groq: { apiKey: "gk" }, openai: { apiKey: "ok" } },
           { retry: { maxRetries: 0 } }
         );
-        const cs = createConversationService(sabi, store);
+        const cs = createConversationService(weysabi, store);
         const conv = await store.conversations.createConversation({
           projectId,
           externalUserId: "user-1",
@@ -148,11 +148,11 @@ describe("ConversationService", () => {
       const store = await createSqliteControlPlaneStore(":memory:");
       try {
         const { projectId } = await seedStore(store);
-        const sabi = createWeysabi(
+        const weysabi = createWeysabi(
           { groq: { apiKey: "gk" }, nvidia: { apiKey: "nk" } },
           { retry: { maxRetries: 0 } }
         );
-        const cs = createConversationService(sabi, store);
+        const cs = createConversationService(weysabi, store);
         const conv = await store.conversations.createConversation({
           projectId,
           externalUserId: "user-1",
@@ -203,11 +203,11 @@ describe("ConversationService", () => {
       const store = await createSqliteControlPlaneStore(":memory:");
       try {
         const { projectId } = await seedStore(store);
-        const sabi = createWeysabi(
+        const weysabi = createWeysabi(
           { groq: { apiKey: "gk" }, openai: { apiKey: "ok" } },
           { retry: { maxRetries: 0 } }
         );
-        const cs = createConversationService(sabi, store);
+        const cs = createConversationService(weysabi, store);
         const conv = await store.conversations.createConversation({
           projectId,
           externalUserId: "user-1",

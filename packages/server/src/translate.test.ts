@@ -34,12 +34,12 @@ describe("translateRequest", () => {
     expect(result.temperature).toBeUndefined();
   });
 
-  it("handles sabi-specific fields", () => {
+  it("handles weysabi-specific fields", () => {
     const result = translateRequest({
       model: "groq/llama-4-scout",
       messages: [{ role: "user", content: "Hi" }],
-      sabi_fallbacks: ["openai/gpt-4o-mini"],
-      sabi_rag: true,
+      weysabi_fallbacks: ["openai/gpt-4o-mini"],
+      weysabi_rag: true,
     });
 
     expect(result.fallbacks).toEqual(["openai/gpt-4o-mini"]);

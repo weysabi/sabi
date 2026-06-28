@@ -20,7 +20,7 @@ export function CtaSection() {
             Read the docs
           </Link>
           <Link
-            href="https://github.com/weysabi/sabi"
+            href="https://github.com/weysabi/weysabi"
             className="inline-flex h-12 items-center justify-center rounded-xl border border-border px-8 text-sm font-medium transition-all hover:bg-muted hover:scale-[1.02] active:scale-[0.98]"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4 mr-2" fill="currentColor">

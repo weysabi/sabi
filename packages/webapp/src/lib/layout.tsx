@@ -12,10 +12,10 @@ export function baseOptions(): BaseLayoutProps {
       { text: "Admin", url: "/admin" },
       {
         text: "GitHub",
-        url: "https://github.com/weysabi/sabi",
+        url: "https://github.com/weysabi/weysabi",
         external: true,
       },
     ],
-    githubUrl: "https://github.com/weysabi/sabi",
+    githubUrl: "https://github.com/weysabi/weysabi",
   };
 }

@@ -28,7 +28,7 @@ export default function HomePage() {
               Admin
             </Link>
             <Link
-              href="https://github.com/weysabi/sabi"
+              href="https://github.com/weysabi/weysabi"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               GitHub

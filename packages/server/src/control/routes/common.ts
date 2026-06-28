@@ -14,7 +14,7 @@ export type HonoContext = Context;
 
 export interface ControlRouteContext {
   app: HonoApp;
-  sabi: Weysabi;
+  weysabi: Weysabi;
   store: ControlPlaneStore;
   projects: ReturnType<typeof createProjectService>;
   prompts: ReturnType<typeof createPromptService>;

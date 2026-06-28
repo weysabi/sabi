@@ -31,9 +31,9 @@ describe("Control plane HTTP routes", () => {
   let completeRequests: CompleteRequest[];
 
   beforeAll(async () => {
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
     completeRequests = [];
-    sabi.complete = (async (request: CompleteRequest) => {
+    weysabi.complete = (async (request: CompleteRequest) => {
       completeRequests.push(request);
       if (request.messages?.at(-1)?.content === "provider fails") {
         throw new Error("provider unavailable");
@@ -45,8 +45,8 @@ describe("Control plane HTTP routes", () => {
         latencyMs: 1,
         usage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 },
       };
-    }) as typeof sabi.complete;
-    sabi.stream = async function* (request: StreamRequest) {
+    }) as typeof weysabi.complete;
+    weysabi.stream = async function* (request: StreamRequest) {
       const last = request.messages?.at(-1)?.content;
       yield { content: "he", done: false };
       if (last === "stream interrupts") {
@@ -58,9 +58,9 @@ describe("Control plane HTTP routes", () => {
         done: true,
         usage: { promptTokens: 4, completionTokens: 2, totalTokens: 6 },
       };
-    } as typeof sabi.stream;
+    } as typeof weysabi.stream;
     store = await createSqliteControlPlaneStore(":memory:");
-    router = await createRouter(sabi, {
+    router = await createRouter(weysabi, {
       adminApiKey: ADMIN_API_KEY,
       controlPlaneStore: store,
     });
@@ -85,8 +85,8 @@ describe("Control plane HTTP routes", () => {
     it("accepts the admin key when a separate chat API key is configured", async () => {
       const localStore = await createSqliteControlPlaneStore(":memory:");
       try {
-        const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-        const localRouter = await createRouter(sabi, {
+        const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+        const localRouter = await createRouter(weysabi, {
           apiKey: "sk-chat",
           adminApiKey: ADMIN_API_KEY,
           controlPlaneStore: localStore,
@@ -1079,7 +1079,7 @@ describe("Control plane HTTP routes", () => {
       const created = (await createRes.json()) as Record<string, unknown>;
       apiKeyId = created.id as string;
       expect(typeof created.secret).toBe("string");
-      expect(String(created.secret)).toStartWith("sabi_");
+      expect(String(created.secret)).toStartWith("weysabi_");
 
       const getRes = await router.fetch(
         controlRequest(`http://localhost/v1/projects/${projectId}/api-keys/${apiKeyId}`)
@@ -1270,9 +1270,9 @@ describe("Control plane HTTP routes", () => {
     };
 
     beforeAll(async () => {
-      const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
+      const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
       const store = await createSqliteControlPlaneStore(":memory:");
-      quotaRouter = await createRouter(sabi, {
+      quotaRouter = await createRouter(weysabi, {
         adminApiKey: ADMIN_API_KEY,
         controlPlaneStore: store,
         quotaStore: rejectingStore,

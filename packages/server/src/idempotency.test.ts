@@ -30,8 +30,8 @@ describe("Idempotency", () => {
       );
     }) as unknown as typeof globalThis.fetch;
 
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const router = await createRouter(sabi);
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const router = await createRouter(weysabi);
 
     const body = JSON.stringify({
       model: "groq/llama-4-scout",
@@ -198,8 +198,8 @@ describe("Idempotency", () => {
         )
       )) as unknown as typeof globalThis.fetch;
 
-    const sabi = createWeysabi({ groq: { apiKey: "test-key" } });
-    const router = await createRouter(sabi);
+    const weysabi = createWeysabi({ groq: { apiKey: "test-key" } });
+    const router = await createRouter(weysabi);
 
     const body = JSON.stringify({
       model: "groq/llama-4-scout",

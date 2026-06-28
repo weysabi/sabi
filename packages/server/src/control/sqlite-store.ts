@@ -1184,7 +1184,7 @@ class SqliteApiKeyStore implements ApiKeyStore {
 
   async create(input: CreateApiKeyInput): Promise<CreatedProjectApiKey> {
     const id = randomUUID();
-    const secret = `sabi_${randomBytes(32).toString("base64url")}`;
+    const secret = `weysabi_${randomBytes(32).toString("base64url")}`;
     const fingerprint = await fingerprintApiKey(secret);
     const keyHash = await Bun.password.hash(secret, {
       algorithm: "argon2id",
