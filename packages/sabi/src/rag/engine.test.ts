@@ -342,7 +342,9 @@ describe("RagEngine", () => {
     for (const suffix of ["", ".hnsw.idx", ".hnsw.vec", "-wal", "-shm"]) {
       try {
         unlinkSync(path + suffix);
-      } catch {}
+      } catch {
+        /* best effort */
+      }
     }
   });
 
@@ -374,7 +376,9 @@ describe("RagEngine", () => {
     for (const suffix of ["", ".hnsw.idx", ".hnsw.vec", "-wal", "-shm"]) {
       try {
         unlinkSync(path + suffix);
-      } catch {}
+      } catch {
+        /* best effort */
+      }
     }
   });
 });
