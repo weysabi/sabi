@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { CompleteRequest, CompleteResponse, Message } from "@weysabi/sabi";
-import type { StreamChunk } from "@weysabi/sabi";
+import type { CompleteRequest, CompleteResponse, Message } from "weysabi";
+import type { StreamChunk } from "weysabi";
 
 const OpenAiMessageSchema = z.object({
   role: z.string(),
@@ -52,7 +52,7 @@ const OpenAiRequestSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["tools"],
-        message: "HTTP tool calling is not supported; use @weysabi/sabi directly",
+        message: "HTTP tool calling is not supported; use weysabi directly",
       });
     }
   });

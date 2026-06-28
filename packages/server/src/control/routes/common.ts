@@ -1,4 +1,4 @@
-import type { Weysabi } from "@weysabi/sabi";
+import type { Weysabi } from "weysabi";
 import { ControlError, ControlResourceNotFoundError } from "../errors";
 import type { IdempotencyInstance } from "../../middleware";
 import type { createPromptService } from "../prompt-service";

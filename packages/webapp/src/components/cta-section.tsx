@@ -32,7 +32,7 @@ export function CtaSection() {
 
         <pre className="animate-fade-in-up animate-delay-200 mt-10 inline-flex items-center gap-2 rounded-xl bg-muted px-6 py-3 text-sm font-mono">
           <span className="text-green-500">$</span>
-          bun add @weysabi/sabi
+          bun add weysabi
         </pre>
       </div>
     </section>

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { createWeysabi } from "@weysabi/sabi";
+import { createWeysabi } from "weysabi";
 import { createRouter } from "./routes";
 import { createAuth, resolveApiKeys, parseApiKeys, resolveClientIp } from "./middleware";
 

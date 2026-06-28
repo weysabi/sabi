@@ -1,6 +1,6 @@
 import { mkdirSync } from "fs";
 import { dirname, resolve } from "path";
-import type { Weysabi } from "@weysabi/sabi";
+import type { Weysabi } from "weysabi";
 import { createRouter, type ServerOptions } from "./routes";
 import { createSqliteControlPlaneStore } from "./control";
 

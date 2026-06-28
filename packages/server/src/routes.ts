@@ -1,5 +1,5 @@
-import type { Weysabi } from "@weysabi/sabi";
-import { AllModelsFailedError } from "@weysabi/sabi/errors";
+import type { Weysabi } from "weysabi";
+import { AllModelsFailedError } from "weysabi/errors";
 import { InMemoryRateLimitStore } from "@joinremba/gate/rate-limit";
 import { InMemoryStore } from "@joinremba/gate/idempotency";
 import { z } from "zod";

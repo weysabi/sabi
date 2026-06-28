@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { createWeysabi } from "@weysabi/sabi";
+import { createWeysabi } from "weysabi";
 import { createSqliteControlPlaneStore } from "./sqlite-store";
 import { createConversationService } from "./conversation-service";
 import type { ControlPlaneStore } from "./store";

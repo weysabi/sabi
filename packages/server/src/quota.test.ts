@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { createWeysabi } from "@weysabi/sabi";
-import type { Weysabi } from "@weysabi/sabi";
+import { createWeysabi } from "weysabi";
+import type { Weysabi } from "weysabi";
 import { createRouter } from "./routes";
 import { fingerprintApiKey, fingerprintRequestApiKey, InMemoryTokenQuotaStore } from "./quota";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Weysabi } from "@weysabi/sabi";
+import type { Weysabi } from "weysabi";
 import { createServer } from "./index";
 
 describe("createServer lifecycle", () => {

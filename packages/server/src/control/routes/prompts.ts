@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CompleteRequest, StreamRequest } from "@weysabi/sabi";
+import type { CompleteRequest, StreamRequest } from "weysabi";
 import { ControlError, errorMessage } from "../errors";
 import type { ControlRouteContext } from "./common";
 import { notFound, parseJsonBody, requireProject } from "./common";

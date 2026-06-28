@@ -1,4 +1,4 @@
-import type { Weysabi } from "@weysabi/sabi";
+import type { Weysabi } from "weysabi";
 import type { IdempotencyInstance } from "../middleware";
 import type { ControlPlaneStore } from "./store";
 import { createPromptService } from "./prompt-service";

@@ -1,5 +1,5 @@
 {
-  "name": "@weysabi/sabi",
+  "name": "weysabi",
   "version": "0.10.0",
   "description": "AI orchestration for fullstack devs — provider failover, structured output, RAG, and streaming. One library, zero markup.",
   "type": "module",

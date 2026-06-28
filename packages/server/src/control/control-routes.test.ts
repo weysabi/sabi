@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { createWeysabi, type CompleteRequest, type StreamRequest } from "@weysabi/sabi";
+import { createWeysabi, type CompleteRequest, type StreamRequest } from "weysabi";
 import { createRouter } from "../routes";
 import { createSqliteControlPlaneStore } from "./sqlite-store";
 import type { TokenQuotaStore } from "../quota";

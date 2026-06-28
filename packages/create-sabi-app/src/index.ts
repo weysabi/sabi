@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { createSabiProject } from "@weysabi/sabi/cli";
+import { createSabiProject } from "weysabi/cli";
 import packageJson from "../package.json" with { type: "json" };
 
 const [projectName] = process.argv.slice(2);

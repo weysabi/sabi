@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { AllModelsFailedError } from "@weysabi/sabi";
-import type { CompleteRequest, Message, StreamRequest, Weysabi } from "@weysabi/sabi";
+import { AllModelsFailedError } from "weysabi";
+import type { CompleteRequest, Message, StreamRequest, Weysabi } from "weysabi";
 import { assembleConversationContext } from "./context";
 import { ControlError, errorMessage } from "./errors";
 import type { ControlPlaneStore } from "./store";

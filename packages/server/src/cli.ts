@@ -18,10 +18,10 @@ const host = hostIdx !== -1 ? args[hostIdx + 1] : undefined;
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`
-@weysabi/server — OpenAI-compatible AI backend
+weysabi-server — OpenAI-compatible AI backend
 
 USAGE
-  bunx @weysabi/server [options]
+  bunx weysabi-server [options]
 
 OPTIONS
   -p, --port <port>  Port to listen on (default: 3000, or $SABI_PORT)
@@ -54,7 +54,7 @@ ENVIRONMENT
 const providers = resolveProvidersFromEnv();
 requireProviders(providers);
 
-const { createWeysabi } = await import("@weysabi/sabi");
+const { createWeysabi } = await import("weysabi");
 const sabi = createWeysabi(providers);
 
 const { createServer } = await import("./index");

@@ -71,7 +71,7 @@ export function HeroSection() {
               <Copy className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <pre className="overflow-x-auto p-5 text-[13px] leading-6 sm:p-6">
-              <code>{`import { createWeysabi } from "@weysabi/sabi";
+              <code>{`import { createWeysabi } from "weysabi";
 
 const sabi = createWeysabi({
   groq: { apiKey: process.env.GROQ_API_KEY },

@@ -1,4 +1,4 @@
-import type { Message } from "@weysabi/sabi";
+import type { Message } from "weysabi";
 import type { Conversation, ConversationMessage, Project, PromptVersion } from "./types";
 import { renderMessages } from "./templates";
 

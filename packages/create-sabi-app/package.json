@@ -37,7 +37,7 @@
     "bun": ">=1.3.1"
   },
   "dependencies": {
-    "@weysabi/sabi": "^0.10.0",
+    "weysabi": "^0.10.0",
     "commander": "^15.0.0"
   },
   "devDependencies": {

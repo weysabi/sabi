@@ -1,4 +1,4 @@
-import type { Message } from "@weysabi/sabi";
+import type { Message } from "weysabi";
 import { ControlError } from "./errors";
 
 const TEMPLATE_REGEX = /\{(\w+)\}/g;

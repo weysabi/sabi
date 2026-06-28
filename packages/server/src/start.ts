@@ -1,4 +1,4 @@
-import { createWeysabi } from "@weysabi/sabi";
+import { createWeysabi } from "weysabi";
 import { createServer } from "./index";
 import { validateOrExit } from "./config";
 import { parseApiKeys } from "./middleware";

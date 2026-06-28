@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { createWeysabi } from "@weysabi/sabi";
+import { createWeysabi } from "weysabi";
 import { createRouter } from "./routes";
 import { InMemoryUsageLedger } from "./ledger";
 import { fingerprintApiKey } from "./quota";

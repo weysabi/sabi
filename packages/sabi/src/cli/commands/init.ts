@@ -182,7 +182,7 @@ Each file is a plain text template with \`{variable}\` placeholders.
 Use \`sabi\`'s prompt registry to load and render them:
 
 \`\`\`ts
-import { createWeysabi } from "@weysabi/sabi";
+import { createWeysabi } from "weysabi";
 
 const sabi = createWeysabi({ /* providers */ });
 

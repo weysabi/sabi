@@ -70,8 +70,8 @@ function serverTemplate(projectName: string): ProjectTemplate {
               typecheck: "bunx tsc --noEmit",
             },
             dependencies: {
-              "@weysabi/sabi": "^0.10.0",
-              "@weysabi/server": "^0.10.0",
+              "weysabi": "^0.10.0",
+              "weysabi-server": "^0.10.0",
             },
             devDependencies: {
               "@types/bun": "latest",
@@ -100,8 +100,8 @@ function serverTemplate(projectName: string): ProjectTemplate {
       },
       {
         path: "src/index.ts",
-        content: `import { createWeysabi } from "@weysabi/sabi";
-import { createServer } from "@weysabi/server";
+        content: `import { createWeysabi } from "weysabi";
+import { createServer } from "weysabi-server";
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 if (!openaiApiKey) {
@@ -212,7 +212,7 @@ function nextjsTemplate(projectName: string): ProjectTemplate {
               typecheck: "tsc --noEmit",
             },
             dependencies: {
-              "@weysabi/sabi": "^0.10.0",
+              "weysabi": "^0.10.0",
               next: "^15",
               react: "^19",
               "react-dom": "^19",
@@ -372,7 +372,7 @@ export default function Home() {
       },
       {
         path: "app/api/chat/route.ts",
-        content: `import { createWeysabi } from "@weysabi/sabi";
+        content: `import { createWeysabi } from "weysabi";
 
 type ChatMessage = {
   role: string;
@@ -595,7 +595,7 @@ function tanstackTemplate(projectName: string): ProjectTemplate {
             },
             dependencies: {
               "@tanstack/react-router": "^1",
-              "@weysabi/sabi": "^0.10.0",
+              "weysabi": "^0.10.0",
               react: "^19",
               "react-dom": "^19",
             },
@@ -805,7 +805,7 @@ export const route = new Route({
       },
       {
         path: "src/api/server.ts",
-        content: `import { createWeysabi } from "@weysabi/sabi";
+        content: `import { createWeysabi } from "weysabi";
 
 const PORT = 3001;
 
@@ -911,8 +911,8 @@ function agentTemplate(projectName: string): ProjectTemplate {
               typecheck: "bunx tsc --noEmit",
             },
             dependencies: {
-              "@weysabi/sabi": "^0.10.0",
-              "@weysabi/server": "^0.10.0",
+              "weysabi": "^0.10.0",
+              "weysabi-server": "^0.10.0",
             },
             devDependencies: {
               "@types/bun": "latest",
@@ -944,8 +944,8 @@ function agentTemplate(projectName: string): ProjectTemplate {
       },
       {
         path: "src/index.ts",
-        content: `import { createWeysabi } from "@weysabi/sabi";
-import { createServer } from "@weysabi/server";
+        content: `import { createWeysabi } from "weysabi";
+import { createServer } from "weysabi-server";
 
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) throw new Error("OPENAI_API_KEY is required. See .env.example.");

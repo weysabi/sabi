@@ -17,10 +17,10 @@ export async function serverCommand(options: { port?: string; host?: string }): 
     options: { port?: number; hostname?: string; providers?: string[] }
   ) => Promise<{ port: number; hostname: string }>;
   try {
-    createServer = (await import("@weysabi/server")).createServer;
+    createServer = (await import("weysabi-server")).createServer;
   } catch {
     console.error(
-      "@weysabi/server is required for sabi serve. Install it: bun add @weysabi/server"
+      "weysabi-server is required for sabi serve. Install it: bun add weysabi-server"
     );
     process.exit(1);
   }

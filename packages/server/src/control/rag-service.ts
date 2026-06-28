@@ -1,5 +1,5 @@
-import { RagManager } from "@weysabi/sabi/rag";
-import type { RagManagerConfig } from "@weysabi/sabi/rag";
+import { RagManager } from "weysabi/rag";
+import type { RagManagerConfig } from "weysabi/rag";
 
 export { RagManager };
 export type { RagManagerConfig };
