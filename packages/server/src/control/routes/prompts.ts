@@ -1,10 +1,9 @@
 import { z } from "zod";
-import type { CompleteRequest, Message, StreamRequest } from "@weysabi/sabi";
-import { ControlError } from "../errors";
-import type { ControlRouteContext, HonoApp } from "./common";
+import type { CompleteRequest, StreamRequest } from "@weysabi/sabi";
+import { ControlError, errorMessage } from "../errors";
+import type { ControlRouteContext } from "./common";
 import { notFound, parseJsonBody, requireProject } from "./common";
-
-const TEMPLATE_REGEX = /\{(\w+)\}/g;
+import { renderMessages } from "../templates";
 
 const ExecutePromptBodySchema = z.object({
   inputs: z.record(z.string(), z.unknown()).default({}),
@@ -15,31 +14,8 @@ const ExecutePromptBodySchema = z.object({
   stream: z.boolean().optional(),
 });
 
-function renderMessages(
-  messages: Message[],
-  inputs: Record<string, unknown>,
-  promptId: string
-): Message[] {
-  return messages.map((message) => ({
-    ...message,
-    content:
-      typeof message.content === "string"
-        ? message.content.replace(TEMPLATE_REGEX, (_match, key: string) => {
-            if (!(key in inputs)) {
-              throw new ControlError(
-                `Missing input "${key}" for prompt "${promptId}"`,
-                "MISSING_PROMPT_INPUT",
-                400
-              );
-            }
-            return String(inputs[key]);
-          })
-        : message.content,
-  }));
-}
-
 export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRouteContext): void {
-  app.post("/v1/projects/:projectId/prompts", async (c: HonoApp) => {
+  app.post("/v1/projects/:projectId/prompts", async (c) => {
     const projectId = c.req.param("projectId");
     await requireProject(projects, projectId);
     const body = await parseJsonBody(c);
@@ -47,7 +23,7 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     return c.json(prompt, 201);
   });
 
-  app.get("/v1/projects/:projectId/prompts", async (c: HonoApp) => {
+  app.get("/v1/projects/:projectId/prompts", async (c) => {
     const projectId = c.req.param("projectId");
     const limit = c.req.query("limit") || undefined;
     const offset = c.req.query("offset") || undefined;
@@ -55,21 +31,21 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     return c.json(result);
   });
 
-  app.get("/v1/projects/:projectId/prompts/:promptId", async (c: HonoApp) => {
+  app.get("/v1/projects/:projectId/prompts/:promptId", async (c) => {
     const { projectId, promptId } = c.req.param();
     const prompt = await prompts.get(projectId, promptId);
     if (!prompt) notFound("Prompt", promptId, "PROMPT_NOT_FOUND");
     return c.json(prompt);
   });
 
-  app.patch("/v1/projects/:projectId/prompts/:promptId", async (c: HonoApp) => {
+  app.patch("/v1/projects/:projectId/prompts/:promptId", async (c) => {
     const { projectId, promptId } = c.req.param();
     const body = await parseJsonBody(c);
     const prompt = await prompts.update(projectId, promptId, body);
     return c.json(prompt);
   });
 
-  app.delete("/v1/projects/:projectId/prompts/:promptId", async (c: HonoApp) => {
+  app.delete("/v1/projects/:projectId/prompts/:promptId", async (c) => {
     const { projectId, promptId } = c.req.param();
     if (!(await prompts.get(projectId, promptId))) {
       notFound("Prompt", promptId, "PROMPT_NOT_FOUND");
@@ -78,7 +54,7 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     return c.json({ deleted: true }, 200);
   });
 
-  app.post("/v1/projects/:projectId/prompts/:promptId/versions", async (c: HonoApp) => {
+  app.post("/v1/projects/:projectId/prompts/:promptId/versions", async (c) => {
     const { projectId, promptId } = c.req.param();
     if (!(await prompts.get(projectId, promptId))) {
       notFound("Prompt", promptId, "PROMPT_NOT_FOUND");
@@ -88,7 +64,7 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     return c.json(version, 201);
   });
 
-  app.get("/v1/projects/:projectId/prompts/:promptId/versions", async (c: HonoApp) => {
+  app.get("/v1/projects/:projectId/prompts/:promptId/versions", async (c) => {
     const { projectId, promptId } = c.req.param();
     const limit = c.req.query("limit") || undefined;
     const offset = c.req.query("offset") || undefined;
@@ -96,23 +72,20 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     return c.json(result);
   });
 
-  app.get("/v1/projects/:projectId/prompts/:promptId/versions/:versionId", async (c: HonoApp) => {
+  app.get("/v1/projects/:projectId/prompts/:promptId/versions/:versionId", async (c) => {
     const { projectId, versionId } = c.req.param();
     const version = await prompts.getVersion(projectId, versionId);
     if (!version) notFound("Prompt version", versionId, "PROMPT_VERSION_NOT_FOUND");
     return c.json(version);
   });
 
-  app.post(
-    "/v1/projects/:projectId/prompts/:promptId/versions/:versionId/publish",
-    async (c: HonoApp) => {
-      const { projectId, promptId, versionId } = c.req.param();
-      const result = await prompts.publishVersion(projectId, promptId, versionId);
-      return c.json(result);
-    }
-  );
+  app.post("/v1/projects/:projectId/prompts/:promptId/versions/:versionId/publish", async (c) => {
+    const { projectId, promptId, versionId } = c.req.param();
+    const result = await prompts.publishVersion(projectId, promptId, versionId);
+    return c.json(result);
+  });
 
-  app.post("/v1/projects/:projectId/prompts/:promptId/execute", async (c: HonoApp) => {
+  app.post("/v1/projects/:projectId/prompts/:promptId/execute", async (c) => {
     const { projectId, promptId } = c.req.param();
     const prompt = await prompts.get(projectId, promptId);
     if (!prompt) notFound("Prompt", promptId, "PROMPT_NOT_FOUND");
@@ -133,7 +106,7 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
     }
 
     const body = ExecutePromptBodySchema.parse(await parseJsonBody(c));
-    const model = version.model ?? body.model;
+    const model = body.model ?? version.model;
     if (!model) {
       throw new ControlError(
         `Prompt "${promptId}" has no model. Configure a model on the published version or provide one when executing.`,
@@ -142,11 +115,11 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
       );
     }
     const request: CompleteRequest = {
-      messages: renderMessages(version.messages, body.inputs, promptId),
+      messages: renderMessages(version.messages, body.inputs, `prompt:${promptId}`),
       model,
-      fallbacks: version.fallbacks ?? body.fallbacks,
-      temperature: version.temperature ?? body.temperature,
-      maxTokens: version.maxTokens ?? body.maxTokens,
+      fallbacks: body.fallbacks ?? version.fallbacks,
+      temperature: body.temperature ?? version.temperature,
+      maxTokens: body.maxTokens ?? version.maxTokens,
     };
 
     if (body.stream === true) {
@@ -161,9 +134,9 @@ export function registerPromptRoutes({ app, sabi, projects, prompts }: ControlRo
               controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
               controller.close();
             } catch (err) {
-              const message = err instanceof Error ? err.message : String(err);
+              const msg = errorMessage(err);
               controller.enqueue(
-                new TextEncoder().encode(`data: ${JSON.stringify({ error: { message } })}\n\n`)
+                new TextEncoder().encode(`data: ${JSON.stringify({ error: { message: msg } })}\n\n`)
               );
               controller.close();
             }
