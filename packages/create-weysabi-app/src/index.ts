@@ -5,7 +5,7 @@ import packageJson from "../package.json" with { type: "json" };
 const [projectName] = process.argv.slice(2);
 
 if (!projectName || projectName.startsWith("-")) {
-  console.error(`Usage: create-sabi-app <project-name> [--template <template>]`);
+  console.error(`Usage: create-weysabi-app <project-name> [--template <template>]`);
   console.error(`  Templates: server, nextjs, tanstack, agent (default: server)`);
   process.exit(1);
 }

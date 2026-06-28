@@ -1,10 +1,10 @@
 {
-  "name": "create-sabi-app",
+  "name": "create-weysabi-app",
   "version": "0.10.0",
-  "description": "Scaffold a new Sabi AI application",
+  "description": "Scaffold a new Weysabi AI application",
   "type": "module",
   "bin": {
-    "create-sabi-app": "./src/index.ts"
+    "create-weysabi-app": "./src/index.ts"
   },
   "exports": {
     ".": {

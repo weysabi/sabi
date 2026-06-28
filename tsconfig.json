@@ -42,6 +42,6 @@
       "weysabi-server/*": ["packages/server/src/*"]
     }
   },
-  "include": ["packages/*/src", "packages/server/drizzle.config.ts", "packages/create-sabi-app/src"],
+  "include": ["packages/*/src", "packages/server/drizzle.config.ts"],
   "exclude": ["packages/webapp/src"]
 }
