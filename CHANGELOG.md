@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.10.0
+
+### Added
+
+- **Templates & CLI** — 4 project templates (`server`, `nextjs`, `tanstack`, `agent`) with `sabi create`. Each generates a ready-to-run project with `.weysabi-template.json` marker for `sabi upgrade`
+- **`sabi upgrade` command** — re-generates template-owned files from the `.weysabi-template.json` marker, preserving user edits to non-template files
+- **`create-weysabi-app` wrapper** — `bunx create-weysabi-app my-app` scaffolds a new project without needing the full CLI. Supports `--template` and `--no-install`
+- **`controlPlane: true` shortcut** — `createServer({ controlPlane: true })` auto-creates a SQLite control-plane store at `.weysabi/control.db`. Simplifies setup for the `agent` and `server` templates
+- **`weysabi/cli` subpath export** — `@weysabi/weysabi/cli` re-exports `createSabiProject` and `CreateTemplate` for programmatic scaffolding
+
+### Changed
+
+- **Renamed packages** — `@weysabi/weysabi` → `weysabi`, `@weysabi/server` → `weysabi-server`, `create-weysabi-app` stays unscoped. All imports, docs, and configs updated
+- **Renamed CLI binary** — `sabi` → `weysabi` (`bun weysabi init`, `bun weysabi server`, etc.)
+- **Renamed env vars** — `SABI_*` → `WEYSABI_*` (`WEYSABI_API_KEY`, `WEYSABI_PORT`, etc.)
+- **Renamed config file** — `weysabi.json` replaces `sabi.json`, `~/.config/weysabi/` replaces `~/.config/sabi/`
+- **Renamed source directory** — `packages/sabi/` → `packages/weysabi/`
+- **Variable rename** — all `const weysabi = createWeysabi(...)` instances updated across codebase and docs
+
+### Fixed
+
+- Dockerfile now references `packages/weysabi/` and `WEYSABI_PORT` instead of stale paths
+- Remaining `SABI_` env var references in `bootstrap.ts`, `aliases.ts`, `middleware.ts` renamed to `WEYSABI_`
+- Lockfile regenerated after all renames
+
 ## v0.9.0
 
 ### Added
