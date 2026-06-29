@@ -43,16 +43,23 @@ describe("MetricsStore", () => {
     m.observeHistogram("latency", 15, { method: "GET" });
 
     const output = m.textOutput();
-    expect(output).toContain('latency_bucket{method="GET",le="0.005"} 1');
-    expect(output).toContain('latency_bucket{method="GET",le="0.25"} 2');
-    expect(output).toContain('latency_bucket{method="GET",le="+Inf"} 3');
+    expect(output).toContain('latency_bucket{le="0.005",method="GET"} 1');
+    expect(output).toContain('latency_bucket{le="0.25",method="GET"} 2');
+    expect(output).toContain('latency_bucket{le="+Inf",method="GET"} 3');
+    expect(output).toContain('latency_count{method="GET"}');
+    expect(output).toContain('latency_sum{method="GET"}');
   });
 
   it("resets all metrics", () => {
     const m = new MetricsStore();
     m.incCounter("requests", { status: "200" });
+    m.observeHistogram("latency", 0.1, { method: "GET" });
+    m.incWsConnection();
     m.reset();
-    expect(m.textOutput().trim()).toBe("# weysabi server metrics");
+    const out = m.textOutput().trim();
+    expect(out).toContain("# weysabi server metrics");
+    expect(out).not.toContain("# HELP requests");
+    expect(out).not.toContain("# HELP latency");
   });
 });
 

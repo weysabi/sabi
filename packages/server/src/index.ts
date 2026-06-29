@@ -184,12 +184,7 @@ export async function createServer(
           { status: "connected" },
           "Total WebSocket connections"
         );
-        metricsStore.setGauge(
-          "ws_connections_active",
-          (server as unknown as { pendingRequests: number }).pendingRequests,
-          {},
-          "Active WebSocket connections"
-        );
+        metricsStore.incWsConnection();
       },
       async message(ws, message) {
         await wsHandler.handleMessage(ws as unknown as WebSocket, message as string | Buffer);
@@ -200,12 +195,7 @@ export async function createServer(
           { status: "disconnected" },
           "Total WebSocket connections"
         );
-        metricsStore.setGauge(
-          "ws_connections_active",
-          (server as unknown as { pendingRequests: number }).pendingRequests,
-          {},
-          "Active WebSocket connections"
-        );
+        metricsStore.decWsConnection();
       },
     },
   });
