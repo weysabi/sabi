@@ -14,7 +14,12 @@ const ExecutePromptBodySchema = z.object({
   stream: z.boolean().optional(),
 });
 
-export function registerPromptRoutes({ app, weysabi, projects, prompts }: ControlRouteContext): void {
+export function registerPromptRoutes({
+  app,
+  weysabi,
+  projects,
+  prompts,
+}: ControlRouteContext): void {
   app.post("/v1/projects/:projectId/prompts", async (c) => {
     const projectId = c.req.param("projectId");
     await requireProject(projects, projectId);

@@ -57,12 +57,12 @@ const result = await weysabi.complete({
 | Tool calling (auto-execute + chaining)                                       | ✅     |
 | Telemetry hooks (latency, cost, errors, fallback)                            | ✅     |
 | Cost estimation (per-response `estimatedCostUsd`)                            | ✅     |
-| Plugin system (`weysabi.use()` lifecycle hooks)                                 | ✅     |
+| Plugin system (`weysabi.use()` lifecycle hooks)                              | ✅     |
 | Cache adapter (`InMemoryCache`, `RedisCache`, BYO)                           | ✅     |
-| OpenTelemetry integration (`weysabi/otel`)                                      | ✅     |
-| Vercel AI SDK adapter (`weysabi/ai-sdk`)                                        | ✅     |
+| OpenTelemetry integration (`weysabi/otel`)                                   | ✅     |
+| Vercel AI SDK adapter (`weysabi/ai-sdk`)                                     | ✅     |
 | Mistral + Ollama providers                                                   | ✅     |
-| CLI (`weysabi init`, `complete`, `stream`, `config`, `prompt`, etc.)            | ✅     |
+| CLI (`weysabi init`, `complete`, `stream`, `config`, `prompt`, etc.)         | ✅     |
 | RAG (zero-config, local or cloud)                                            | ✅     |
 | Memory & conversations (persistent sessions, auto-truncation)                | ✅     |
 | ChatSDK (prepare + call + record in one)                                     | ✅     |

@@ -55,7 +55,7 @@ console.log(res.parsed.total, res.latencyMs);
 | OpenTelemetry integration                                                                                       | ✅     |
 | Vercel AI SDK adapter                                                                                           | ✅     |
 | Cost estimation (per-response `estimatedCostUsd`)                                                               | ✅     |
-| CLI (`weysabi init`, `create`, `complete`, `stream`, `config`, `prompt`)                                           | ✅     |
+| CLI (`weysabi init`, `create`, `complete`, `stream`, `config`, `prompt`)                                        | ✅     |
 | Control plane — projects, conversations, runs, API keys                                                         | 🔜     |
 | Weysabi Cloud — hosted control plane, evals, monitoring                                                         | 🔜     |
 

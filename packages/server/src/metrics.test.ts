@@ -63,6 +63,71 @@ describe("MetricsStore", () => {
   });
 });
 
+describe("MetricsStore — gap-fill metrics", () => {
+  it("incLlmTokens increments prompt, completion, and total counters", () => {
+    const m = new MetricsStore();
+    m.incLlmTokens(50, 30);
+
+    const output = m.textOutput();
+    expect(output).toContain('llm_tokens_total{type="prompt"} 50');
+    expect(output).toContain('llm_tokens_total{type="completion"} 30');
+    expect(output).toContain('llm_tokens_total{type="total"} 80');
+  });
+
+  it("multiple incLlmTokens calls accumulate", () => {
+    const m = new MetricsStore();
+    m.incLlmTokens(10, 5);
+    m.incLlmTokens(20, 10);
+
+    const output = m.textOutput();
+    expect(output).toContain('llm_tokens_total{type="prompt"} 30');
+    expect(output).toContain('llm_tokens_total{type="completion"} 15');
+    expect(output).toContain('llm_tokens_total{type="total"} 45');
+  });
+
+  it("setDbHealthy emits gauge with backend label", () => {
+    const m = new MetricsStore();
+    m.setDbHealthy(true, "sqlite");
+
+    const output = m.textOutput();
+    expect(output).toContain("# HELP db_healthy");
+    expect(output).toContain("# TYPE db_healthy gauge");
+    expect(output).toContain('db_healthy{backend="sqlite"} 1');
+  });
+
+  it("setDbHealthy with unhealthy state", () => {
+    const m = new MetricsStore();
+    m.setDbHealthy(false, "postgres");
+
+    const output = m.textOutput();
+    expect(output).toContain('db_healthy{backend="postgres"} 0');
+  });
+
+  it("setProviderEnabled emits gauge", () => {
+    const m = new MetricsStore();
+    m.setProviderEnabled("openai", true);
+    m.setProviderEnabled("groq", true);
+    m.setProviderEnabled("anthropic", false);
+
+    const output = m.textOutput();
+    expect(output).toContain("# HELP provider_enabled");
+    expect(output).toContain("# TYPE provider_enabled gauge");
+    expect(output).toContain('provider_enabled{provider="openai"} 1');
+    expect(output).toContain('provider_enabled{provider="groq"} 1');
+    expect(output).toContain('provider_enabled{provider="anthropic"} 0');
+  });
+
+  it("process_memory_bytes appears in output", () => {
+    const m = new MetricsStore();
+    const output = m.textOutput();
+    expect(output).toContain("# HELP process_memory_bytes");
+    expect(output).toContain("# TYPE process_memory_bytes gauge");
+    expect(output).toContain('process_memory_bytes{type="rss"}');
+    expect(output).toContain('process_memory_bytes{type="heapUsed"}');
+    expect(output).toContain('process_memory_bytes{type="heapTotal"}');
+  });
+});
+
 describe("Metrics integration", () => {
   let originalFetch: typeof globalThis.fetch;
 

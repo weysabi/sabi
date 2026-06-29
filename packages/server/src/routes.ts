@@ -410,6 +410,10 @@ export async function createRouter(
                 const chunk = next.value;
                 if (chunk.done && chunk.usage?.totalTokens && keyFingerprint) {
                   await commitQuota(chunk.usage.totalTokens);
+                  options.metricsStore?.incLlmTokens(
+                    chunk.usage.promptTokens,
+                    chunk.usage.completionTokens
+                  );
                   await usageLedger.record({
                     keyFingerprint,
                     model,
@@ -468,6 +472,10 @@ export async function createRouter(
     }
 
     if (keyFingerprint && response.usage?.totalTokens) {
+      options.metricsStore?.incLlmTokens(
+        response.usage.promptTokens,
+        response.usage.completionTokens
+      );
       await usageLedger.record({
         keyFingerprint,
         model: request.model as string,

@@ -321,7 +321,10 @@ describe("RagEngine", () => {
       topK: 5,
     });
     engine1.setProviders({ provider: "openai", apiKey: "test-key" }, {});
-    await engine1.load({ name: "persist.md", content: "Persistence test content for the RAG engine." });
+    await engine1.load({
+      name: "persist.md",
+      content: "Persistence test content for the RAG engine.",
+    });
     expect(engine1.stats().files).toBe(1);
     engine1.close();
 
@@ -369,7 +372,10 @@ describe("RagEngine", () => {
       topK: 5,
     });
     engine2.setProviders({ provider: "openai", apiKey: "test-key" }, {});
-    const results = await engine2.load({ name: "dedup.md", content: "Deduplication test content." });
+    const results = await engine2.load({
+      name: "dedup.md",
+      content: "Deduplication test content.",
+    });
     expect(results[0]!.skipped).toBe(true);
     engine2.close();
 

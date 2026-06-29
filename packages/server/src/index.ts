@@ -122,6 +122,13 @@ export async function createServer(
   const modelAliasesMap: ModelAliasMap = buildModelAliases(options.modelAliases);
   const metricsStore = new MetricsStore();
 
+  metricsStore.setDbHealthy(true, options.storage ?? "sqlite");
+  if (options.providers) {
+    for (const provider of options.providers) {
+      metricsStore.setProviderEnabled(provider, true);
+    }
+  }
+
   const router = await createRouter(weysabi, {
     port,
     apiKey,

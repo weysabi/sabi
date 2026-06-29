@@ -61,9 +61,9 @@ describe("createSabiProject", () => {
     const projectDir = resolve(tmpDir, "existing");
     mkdirSync(projectDir, { recursive: true });
     try {
-      await expect(
-        createSabiProject("existing", { cwd: tmpDir, install: false })
-      ).rejects.toThrow("already exists");
+      await expect(createSabiProject("existing", { cwd: tmpDir, install: false })).rejects.toThrow(
+        "already exists"
+      );
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

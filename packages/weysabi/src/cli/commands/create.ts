@@ -28,10 +28,52 @@ export interface ProjectTemplate {
 }
 
 export const TEMPLATE_OWNED_FILES: Record<CreateTemplate, string[]> = {
-  server: ["package.json", "tsconfig.json", "src/index.ts", ".env.example", ".gitignore", "README.md", ".weysabi-template.json"],
-  nextjs: ["package.json", "tsconfig.json", "next.config.ts", "app/layout.tsx", "app/page.tsx", "app/api/chat/route.ts", "app/styles.css", ".env.example", ".gitignore", "README.md", ".weysabi-template.json"],
-  tanstack: ["package.json", "tsconfig.json", "vite.config.ts", "index.html", "src/main.tsx", "src/routeTree.gen.ts", "src/routes/__root.tsx", "src/routes/index.tsx", "src/api/server.ts", ".env.example", ".gitignore", "README.md", ".weysabi-template.json"],
-  agent: ["package.json", "tsconfig.json", "src/index.ts", ".env.example", ".gitignore", "README.md", ".weysabi-template.json"],
+  server: [
+    "package.json",
+    "tsconfig.json",
+    "src/index.ts",
+    ".env.example",
+    ".gitignore",
+    "README.md",
+    ".weysabi-template.json",
+  ],
+  nextjs: [
+    "package.json",
+    "tsconfig.json",
+    "next.config.ts",
+    "app/layout.tsx",
+    "app/page.tsx",
+    "app/api/chat/route.ts",
+    "app/styles.css",
+    ".env.example",
+    ".gitignore",
+    "README.md",
+    ".weysabi-template.json",
+  ],
+  tanstack: [
+    "package.json",
+    "tsconfig.json",
+    "vite.config.ts",
+    "index.html",
+    "src/main.tsx",
+    "src/routeTree.gen.ts",
+    "src/routes/__root.tsx",
+    "src/routes/index.tsx",
+    "src/api/server.ts",
+    ".env.example",
+    ".gitignore",
+    "README.md",
+    ".weysabi-template.json",
+  ],
+  agent: [
+    "package.json",
+    "tsconfig.json",
+    "src/index.ts",
+    ".env.example",
+    ".gitignore",
+    "README.md",
+    ".weysabi-template.json",
+  ],
 };
 
 function isCreateTemplate(value: string): value is CreateTemplate {
@@ -70,7 +112,7 @@ function serverTemplate(projectName: string): ProjectTemplate {
               typecheck: "bunx tsc --noEmit",
             },
             dependencies: {
-              "weysabi": "^0.10.0",
+              weysabi: "^0.10.0",
               "weysabi-server": "^0.10.0",
             },
             devDependencies: {
@@ -212,7 +254,7 @@ function nextjsTemplate(projectName: string): ProjectTemplate {
               typecheck: "tsc --noEmit",
             },
             dependencies: {
-              "weysabi": "^0.10.0",
+              weysabi: "^0.10.0",
               next: "^15",
               react: "^19",
               "react-dom": "^19",
@@ -595,7 +637,7 @@ function tanstackTemplate(projectName: string): ProjectTemplate {
             },
             dependencies: {
               "@tanstack/react-router": "^1",
-              "weysabi": "^0.10.0",
+              weysabi: "^0.10.0",
               react: "^19",
               "react-dom": "^19",
             },
@@ -614,28 +656,29 @@ function tanstackTemplate(projectName: string): ProjectTemplate {
       },
       {
         path: "tsconfig.json",
-        content: JSON.stringify(
-          {
-            compilerOptions: {
-              lib: ["DOM", "DOM.Iterable", "ESNext"],
-              target: "ESNext",
-              module: "ESNext",
-              moduleResolution: "bundler",
-              jsx: "preserve",
-              strict: true,
-              skipLibCheck: true,
-              noEmit: true,
-              esModuleInterop: true,
-              allowSyntheticDefaultImports: true,
-              resolveJsonModule: true,
-              isolatedModules: true,
-              types: ["bun"],
+        content:
+          JSON.stringify(
+            {
+              compilerOptions: {
+                lib: ["DOM", "DOM.Iterable", "ESNext"],
+                target: "ESNext",
+                module: "ESNext",
+                moduleResolution: "bundler",
+                jsx: "preserve",
+                strict: true,
+                skipLibCheck: true,
+                noEmit: true,
+                esModuleInterop: true,
+                allowSyntheticDefaultImports: true,
+                resolveJsonModule: true,
+                isolatedModules: true,
+                types: ["bun"],
+              },
+              include: ["src"],
             },
-            include: ["src"],
-          },
-          null,
-          2
-        ) + "\n",
+            null,
+            2
+          ) + "\n",
       },
       {
         path: "vite.config.ts",
@@ -911,7 +954,7 @@ function agentTemplate(projectName: string): ProjectTemplate {
               typecheck: "bunx tsc --noEmit",
             },
             dependencies: {
-              "weysabi": "^0.10.0",
+              weysabi: "^0.10.0",
               "weysabi-server": "^0.10.0",
             },
             devDependencies: {
@@ -925,22 +968,23 @@ function agentTemplate(projectName: string): ProjectTemplate {
       },
       {
         path: "tsconfig.json",
-        content: JSON.stringify(
-          {
-            compilerOptions: {
-              lib: ["ESNext"],
-              target: "ESNext",
-              module: "Preserve",
-              moduleResolution: "bundler",
-              strict: true,
-              skipLibCheck: true,
-              types: ["bun"],
+        content:
+          JSON.stringify(
+            {
+              compilerOptions: {
+                lib: ["ESNext"],
+                target: "ESNext",
+                module: "Preserve",
+                moduleResolution: "bundler",
+                strict: true,
+                skipLibCheck: true,
+                types: ["bun"],
+              },
+              include: ["src"],
             },
-            include: ["src"],
-          },
-          null,
-          2
-        ) + "\n",
+            null,
+            2
+          ) + "\n",
       },
       {
         path: "src/index.ts",

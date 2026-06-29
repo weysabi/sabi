@@ -2,11 +2,11 @@
 
 Weysabi is a Bun workspace with three packages:
 
-| Package           | Purpose                                                      |
-| ----------------- | ------------------------------------------------------------ |
-| `packages/weysabi`   | Provider-agnostic AI orchestration SDK and `weysabi` CLI        |
-| `packages/server` | OpenAI-compatible Bun/Hono server and administration API     |
-| `packages/webapp` | Static Next.js documentation and self-hosted admin interface |
+| Package            | Purpose                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| `packages/weysabi` | Provider-agnostic AI orchestration SDK and `weysabi` CLI     |
+| `packages/server`  | OpenAI-compatible Bun/Hono server and administration API     |
+| `packages/webapp`  | Static Next.js documentation and self-hosted admin interface |
 
 Tests live beside source files as `src/*.test.ts`.
 

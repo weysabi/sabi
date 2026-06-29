@@ -37,8 +37,8 @@ weysabi server --host 127.0.0.1 --port 3000
 
 ## Configuration
 
-| Env Var                  | Default   | Description                           |
-| ------------------------ | --------- | ------------------------------------- |
+| Env Var                     | Default   | Description                           |
+| --------------------------- | --------- | ------------------------------------- |
 | `WEYSABI_PORT`              | `3000`    | HTTP server port                      |
 | `WEYSABI_HOST`              | `0.0.0.0` | HTTP server bind address              |
 | `WEYSABI_API_KEY`           | —         | Bearer token auth (disabled if unset) |

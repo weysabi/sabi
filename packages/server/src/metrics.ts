@@ -32,20 +32,61 @@ export class MetricsStore {
     this.wsCount--;
   }
 
-  incCounter(name: string, labels: Record<string, string>, help?: string) {
+  incCounter(name: string, labels: Record<string, string>, help?: string, value = 1) {
     const key = `${name}{${this.labelKey(labels)}}`;
     const existing = this.counters.get(key);
     if (existing) {
-      existing.value++;
+      existing.value += value;
     } else {
       this.counters.set(key, {
         name,
         help: help ?? name,
         labels,
-        value: 1,
+        value,
         type: "counter",
       });
     }
+  }
+
+  incLlmTokens(promptTokens: number, completionTokens: number) {
+    this.incCounter(
+      "llm_tokens_total",
+      { type: "prompt" },
+      "Total LLM tokens by type",
+      promptTokens
+    );
+    this.incCounter(
+      "llm_tokens_total",
+      { type: "completion" },
+      "Total LLM tokens by type",
+      completionTokens
+    );
+    this.incCounter(
+      "llm_tokens_total",
+      { type: "total" },
+      "Total LLM tokens by type",
+      promptTokens + completionTokens
+    );
+  }
+
+  setDbHealthy(healthy: boolean, backend?: string) {
+    const labels: Record<string, string> = {};
+    if (backend) labels.backend = backend;
+    this.setGauge(
+      "db_healthy",
+      healthy ? 1 : 0,
+      labels,
+      "Database connectivity (1=healthy, 0=unhealthy)"
+    );
+  }
+
+  setProviderEnabled(provider: string, enabled: boolean) {
+    this.setGauge(
+      "provider_enabled",
+      enabled ? 1 : 0,
+      { provider },
+      "Provider configured and available (1=enabled, 0=disabled)"
+    );
   }
 
   setGauge(name: string, value: number, labels: Record<string, string>, help?: string) {
@@ -139,7 +180,15 @@ export class MetricsStore {
     return lines;
   }
 
+  private collect() {
+    const mem = process.memoryUsage();
+    for (const [type, bytes] of Object.entries(mem)) {
+      this.setGauge("process_memory_bytes", bytes, { type }, "Process memory in bytes");
+    }
+  }
+
   textOutput(): string {
+    this.collect();
     const lines: string[] = [];
     lines.push("# weysabi server metrics");
 
