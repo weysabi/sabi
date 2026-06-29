@@ -3,11 +3,13 @@ import { dirname, resolve } from "path";
 import type { Weysabi } from "weysabi";
 import { createRouter, type ServerOptions } from "./routes";
 import { createPostgresControlPlaneStore, createSqliteControlPlaneStore } from "./control";
-import { InMemoryTokenQuotaStore, SqliteTokenQuotaStore } from "./quota";
+import { InMemoryTokenQuotaStore, SqliteTokenQuotaStore, fingerprintApiKey } from "./quota";
 import type { TokenQuotaStore } from "./quota";
 import { InMemoryUsageLedger, SqliteUsageLedger } from "./ledger";
 import type { UsageLedger } from "./ledger";
 import { createModuleLogger } from "./logger";
+import { createWsHandler } from "./ws";
+import { buildModelAliases } from "./aliases";
 const log = createModuleLogger("server");
 
 export type { ServerOptions };
@@ -138,13 +140,38 @@ export async function createServer(
     authHandler,
   });
 
+  const wsHandler = createWsHandler({
+    weysabi,
+    modelAliases: buildModelAliases(options.modelAliases),
+    quotaConfig: options.quotaConfig,
+    quotaStore,
+    usageLedger,
+  });
+
   const server = Bun.serve({
     port,
     hostname,
-    fetch(req, server) {
+    async fetch(req, server) {
       const address = server.requestIP(req)?.address;
       if (address) remoteAddresses.set(req, address);
+
+      const url = new URL(req.url);
+      if (url.pathname === "/v1/ws") {
+        const apiKeyParam = url.searchParams.get("apiKey");
+        const keyFingerprint = apiKeyParam ? await fingerprintApiKey(apiKeyParam) : undefined;
+        const success = server.upgrade(req, {
+          data: { keyFingerprint },
+        } as never);
+        if (success) return;
+        return new Response("WebSocket upgrade failed", { status: 400 });
+      }
+
       return router.fetch(req);
+    },
+    websocket: {
+      async message(ws, message) {
+        await wsHandler.handleMessage(ws as unknown as WebSocket, message as string | Buffer);
+      },
     },
   });
 
