@@ -75,8 +75,7 @@ export type {
 export type { Plugin, CacheAdapter } from "./types";
 export type { GuardrailOptions } from "./guardrails/types";
 export { cacheKey } from "./types";
-export { InMemoryCache, RedisCache } from "./cache";
-export type { RedisLikeClient } from "./cache";
+export { InMemoryCache } from "./cache";
 export { createSabiClient, createSabiProjectClient, SabiApiError } from "./client";
 export type {
   AppendMessageInput,

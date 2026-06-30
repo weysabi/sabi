@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { createWeysabi } from "./index";
-import { InMemoryCache, RedisCache } from "./cache";
+import { InMemoryCache } from "./cache";
 import type { CompleteResponse } from "./types";
 import { cacheKey } from "./types";
 import { z } from "zod";
@@ -188,117 +188,6 @@ describe("weysabi cache integration", () => {
     };
     expect((await weysabi.complete(request)).content).toBe("raw!");
     expect((await weysabi.complete(request)).content).toBe("raw!");
-    expect(callCount).toBe(1);
-  });
-});
-
-describe("RedisCache", () => {
-  function createMockRedis() {
-    const store = new Map<string, string>();
-    const ttlMap = new Map<string, number>();
-
-    return {
-      store,
-      ttlMap,
-      client: {
-        async get(key: string): Promise<string | null> {
-          const expiresAt = ttlMap.get(key);
-          if (expiresAt !== undefined && Date.now() > expiresAt) {
-            store.delete(key);
-            ttlMap.delete(key);
-            return null;
-          }
-          return store.get(key) ?? null;
-        },
-        async set(key: string, value: string, options?: { PX?: number }): Promise<"OK"> {
-          store.set(key, value);
-          if (options?.PX) {
-            ttlMap.set(key, Date.now() + options.PX);
-          }
-          return "OK";
-        },
-        async del(key: string): Promise<number> {
-          store.delete(key);
-          ttlMap.delete(key);
-          return 1;
-        },
-      },
-    };
-  }
-
-  it("stores and retrieves values", async () => {
-    const { client } = createMockRedis();
-    const cache = new RedisCache(client);
-
-    await cache.set("key1", {
-      content: "hello",
-      model: "groq/llama-3.1-8b-instant",
-      provider: "groq",
-      latencyMs: 100,
-    });
-
-    const result = await cache.get("key1");
-    expect(result?.content).toBe("hello");
-  });
-
-  it("returns null for missing keys", async () => {
-    const { client } = createMockRedis();
-    const cache = new RedisCache(client);
-
-    const result = await cache.get("nonexistent");
-    expect(result).toBeNull();
-  });
-
-  it("expires entries after TTL", async () => {
-    const { client } = createMockRedis();
-    const cache = new RedisCache(client, 50);
-
-    await cache.set("key1", {
-      content: "hello",
-      model: "groq/llama-3.1-8b-instant",
-      provider: "groq",
-      latencyMs: 100,
-    });
-
-    expect(await cache.get("key1")).not.toBeNull();
-
-    await new Promise((r) => setTimeout(r, 60));
-    expect(await cache.get("key1")).toBeNull();
-  });
-
-  it("handles corrupted JSON gracefully", async () => {
-    const { client } = createMockRedis();
-    const cache = new RedisCache(client);
-
-    await client.set("corrupt", "not-json");
-    const result = await cache.get("corrupt");
-    expect(result).toBeNull();
-  });
-
-  it("works with weysabi complete via cache", async () => {
-    let callCount = 0;
-    setFetch(async () => {
-      callCount++;
-      return okResponse({
-        choices: [{ message: { content: `r-${callCount}` } }],
-      });
-    });
-
-    const { client } = createMockRedis();
-    const cache = new RedisCache(client, 60_000);
-    const weysabi = createWeysabi({ groq: { apiKey: "gsk_abc" } }, { cache });
-
-    const req = {
-      model: "groq/llama-3.1-8b-instant",
-      messages: [{ role: "user" as const, content: "hi" }],
-    };
-
-    const r1 = await weysabi.complete(req);
-    expect(r1.content).toBe("r-1");
-    expect(callCount).toBe(1);
-
-    const r2 = await weysabi.complete(req);
-    expect(r2.content).toBe("r-1");
     expect(callCount).toBe(1);
   });
 });

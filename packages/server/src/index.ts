@@ -12,6 +12,8 @@ import { createModuleLogger } from "./logger";
 import { createWsHandler } from "./ws";
 import { buildModelAliases } from "./aliases";
 import type { ModelAliasMap } from "./aliases";
+import { Redis } from "ioredis";
+import { RedisCache, type RedisLikeClient } from "./redis-cache";
 const log = createModuleLogger("server");
 
 export type { ServerOptions };
@@ -65,6 +67,26 @@ async function resolveUsageLedger(options: ServerOptions): Promise<UsageLedger> 
     return SqliteUsageLedger.create(dbPath);
   }
   return new InMemoryUsageLedger();
+}
+
+async function resolveResponseCache(options: ServerOptions) {
+  if (options.responseCache) return options.responseCache;
+  const redisUrl = options.redisUrl ?? process.env.WEYSABI_REDIS_URL;
+  if (!redisUrl) return undefined;
+  if (process.env.NODE_ENV !== "production") {
+    log.info("Response cache: Redis available but requires NODE_ENV=production");
+    return undefined;
+  }
+  const redis = new Redis(redisUrl);
+  const client: RedisLikeClient = {
+    get: (key) => redis.get(key),
+    set: (key, value, opts) =>
+      opts?.PX ? redis.set(key, value, "PX", opts.PX) : redis.set(key, value),
+    del: (key) => redis.del(key),
+  };
+  const ttl = options.responseCacheTtl ?? 60_000;
+  log.info("Response cache: Redis", { ttl });
+  return new RedisCache(client, ttl);
 }
 
 export async function createServer(
@@ -129,6 +151,8 @@ export async function createServer(
     }
   }
 
+  const responseCache = await resolveResponseCache(options);
+
   const router = await createRouter(weysabi, {
     port,
     apiKey,
@@ -151,6 +175,8 @@ export async function createServer(
     getRemoteAddress: (request) => remoteAddresses.get(request),
     authHandler,
     metricsStore,
+    responseCache,
+    responseCacheTtl: options.responseCacheTtl,
   });
 
   const wsHandler = createWsHandler({
